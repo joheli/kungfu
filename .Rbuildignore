@@ -1,0 +1,3 @@
+.gitignore
+^kungfu\.Rproj$
+^\.Rproj\.user$
