@@ -53,6 +53,17 @@ rescale_adist <- function(x) rescale_modify(rescale10(x), "push down")
 #' @param f2 character specifying field name carrying unique patterns
 #'
 #' @return data.frame of merged t1 and t2 based on found similarities between f1 and f2
+#'
+#' @importFrom dplyr %>%
+#' @importFrom dplyr pull
+#' @importFrom dplyr mutate
+#' @importFrom dplyr group_by
+#' @importFrom dplyr slice_max
+#' @importFrom dplyr arrange
+#' @importFrom dplyr inner_join
+#' @importFrom tidyr pivot_longer
+#' @importFrom utils adist
+#'
 #' @export
 #'
 #' @examples
@@ -81,7 +92,7 @@ matchmaker <- function(t1,
   matches_d <- matches %>%
     as.data.frame %>%
     mutate(type = 1:nrow(t2)) %>%
-    tidyr::pivot_longer(-type,
+    pivot_longer(-type,
                  names_to = "row",
                  values_to = "rwasd") %>%
     group_by(row) %>%
