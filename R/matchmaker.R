@@ -1,11 +1,4 @@
-# df1 <- tibble(
-#   gurken = c("Bungas (gut)", "Bungas", "Heinz", "Heinz Maky", "Birgit", "Bungas Hungas", "Birgit", "Kokos")
-# )
-#
-# mx <- tibble(
-#   typ = c("Bungas", "Heinz", "Heinz Maky", "Birgit", ".*")
-# )
-
+# rescale value from 0 to 1
 rescale01 <- function(x) {
   if (all(diff(x) == 0)) { # if all values are the same ...
     rep(0, length(x))      # ... return vector of zeroes
@@ -14,7 +7,10 @@ rescale01 <- function(x) {
   }
 }
 
+# rescale value from 1 to 0
 rescale10 <- function(x) 1 - rescale01(x)
+
+# massage rescaled value by condensing values closer to one (pull up) or closer to zero (push down)
 rescale_modify <- function(x, modification = c("none", "pull up", "push down")) {
   # check if argument between 0 and 1
   if (min(x) < 0 | max(x) > 1) stop("Please provide numeric between 0 and 1.")
@@ -41,6 +37,7 @@ rescale_modify <- function(x, modification = c("none", "pull up", "push down")) 
   )
 }
 
+# the rescale function for matchmaker
 rescale_adist <- function(x) rescale_modify(rescale10(x), "push down")
 
 #' matchmaker
@@ -60,9 +57,12 @@ rescale_adist <- function(x) rescale_modify(rescale10(x), "push down")
 #' @importFrom dplyr group_by
 #' @importFrom dplyr slice_max
 #' @importFrom dplyr arrange
+#' @importFrom dplyr select
+#' @importFrom dplyr ungroup
 #' @importFrom dplyr inner_join
 #' @importFrom tidyr pivot_longer
 #' @importFrom utils adist
+#' @import nycflights13
 #'
 #' @export
 #'
@@ -95,6 +95,9 @@ matchmaker <- function(t1,
   matches <- rs * w
   colnames(matches) <- as.character(1:nrow(t1)) # columns represent row numbers of t1
 
+  # to avoid errors
+  uniquerownumber <- uniquepatternnumber <- rwasd <- NULL
+
   matches_d <- matches %>%
     as.data.frame %>%
     mutate(uniquepatternnumber = as.character(1:nrow(t2))) %>%
@@ -111,5 +114,3 @@ matchmaker <- function(t1,
 
   matches_d
 }
-
-# m <- matchmaker(df1, "gurken", mx, "typ")
