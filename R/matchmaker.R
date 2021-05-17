@@ -1,6 +1,3 @@
-library(dplyr)
-library(tidyr)
-
 # df1 <- tibble(
 #   gurken = c("Bungas (gut)", "Bungas", "Heinz", "Heinz Maky", "Birgit", "Bungas Hungas", "Birgit", "Kokos")
 # )
@@ -84,7 +81,7 @@ matchmaker <- function(t1,
   matches_d <- matches %>%
     as.data.frame %>%
     mutate(type = 1:nrow(t2)) %>%
-    pivot_longer(-type,
+    tidyr::pivot_longer(-type,
                  names_to = "row",
                  values_to = "rwasd") %>%
     group_by(row) %>%
