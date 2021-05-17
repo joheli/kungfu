@@ -67,14 +67,20 @@ rescale_adist <- function(x) rescale_modify(rescale10(x), "push down")
 #' @export
 #'
 #' @examples
+#' set.seed(1)
+#' p <- nycflights13::planes %>% slice(sample(1:nrow(nycflights13::planes), 20))
+#' model_type <- tibble(pattern = c("PA-32", "EMB-145", "7[2-8]7", "A320", ".*"),
+#'                      model_type = c("Piper 32", "Embraer 145", "Boeing 7X7", "Airbus 320", "no clue at all!"))
+#' p_with_model_type <- matchmaker(p, "model", model_type, "pattern")
+
 matchmaker <- function(t1,
                        f1,
                        t2,
                        f2) {
 
   # extract fields
-  x1 <- pull(t1, f1)
-  x2 <- pull(t2, f2)
+  x1 <- pull(t1, f1) %>% as.character
+  x2 <- pull(t2, f2) %>% as.character
 
   # approximate string distances
   ad <- adist(x2, x1, fixed = F, ignore.case = T)
@@ -87,19 +93,21 @@ matchmaker <- function(t1,
 
   # rescaled and weighted approximate string distances (rwasd)
   matches <- rs * w
-  colnames(matches) <- 1:nrow(t1) # columns represent row numbers of t1
+  colnames(matches) <- as.character(1:nrow(t1)) # columns represent row numbers of t1
 
   matches_d <- matches %>%
     as.data.frame %>%
-    mutate(type = 1:nrow(t2)) %>%
-    pivot_longer(-type,
-                 names_to = "row",
+    mutate(uniquepatternnumber = as.character(1:nrow(t2))) %>%
+    pivot_longer(-uniquepatternnumber,
+                 names_to = "uniquerownumber",
                  values_to = "rwasd") %>%
-    group_by(row) %>%
+    group_by(uniquerownumber) %>%
     slice_max(rwasd, n = 1, with_ties = FALSE) %>% # do not allow more than one match
-    arrange(row) %>%
-    inner_join(mutate(t1, row = as.character(1:n()))) %>%
-    inner_join(mutate(t2, type = 1:n()))
+    arrange(as.numeric(uniquerownumber)) %>%
+    inner_join(mutate(t1, uniquerownumber = as.character(1:n())), by = "uniquerownumber") %>%
+    inner_join(mutate(t2, uniquepatternnumber = as.character(1:n())), by = "uniquepatternnumber") %>%
+    ungroup() %>%
+    select(-uniquerownumber, -uniquepatternnumber, -rwasd, -pattern)
 
   matches_d
 }

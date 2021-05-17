@@ -21,3 +21,10 @@ data.frame of merged t1 and t2 based on found similarities between f1 and f2
 \description{
 Function to match rows in a given data.frame to unique patterns contained in a second data.frame.
 }
+\examples{
+set.seed(1)
+p <- nycflights13::planes \%>\% slice(sample(1:nrow(nycflights13::planes), 20))
+model_type <- tibble(pattern = c("PA-32", "EMB-145", "7[2-8]7", "A320", ".*"),
+                     model_type = c("Piper 32", "Embraer 145", "Boeing 7X7", "Airbus 320", "no clue at all!"))
+p_with_model_type <- matchmaker(p, "model", model_type, "pattern")
+}
