@@ -1,15 +1,14 @@
 Package: kungfu
-Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9000
+Title: Contains various data processing gadgets
+Version: 0.0.1
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Johannes",
+           family = "Elias",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+           email = "joheli@gmx.net",
+           comment = c(ORCID = "0000-0002-5878-7040"))
+Description: Contains various data processing gadgets.
+License: AGPL (>= 3)
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
