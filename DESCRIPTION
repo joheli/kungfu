@@ -1,13 +1,13 @@
 Package: kungfu
-Title: Contains various data processing gadgets
-Version: 0.0.2
+Title: kungfu - kicks stubborn data into shape
+Version: 0.0.3
 Authors@R: 
     person(given = "Johannes",
            family = "Elias",
            role = c("aut", "cre"),
            email = "joheli@gmx.net",
            comment = c(ORCID = "0000-0002-5878-7040"))
-Description: Contains various data processing gadgets.
+Description: Contains various data processing tools.
 Depends: R (>= 4.0.4),
         dplyr(>= 1.0.5)
 License: AGPL (>= 3)
