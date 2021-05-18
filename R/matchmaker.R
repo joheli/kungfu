@@ -95,8 +95,8 @@ matchmaker <- function(t1,
   matches <- rs * w
   colnames(matches) <- as.character(1:nrow(t1)) # columns represent row numbers of t1
 
-  # to avoid errors
-  uniquerownumber <- uniquepatternnumber <- rwasd <- NULL
+  # to avoid errors of type "Undefined global functions or variables"
+  uniquerownumber <- uniquepatternnumber <- rwasd <- n <- pattern <- NULL
 
   matches_d <- matches %>%
     as.data.frame %>%
