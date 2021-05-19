@@ -3,6 +3,7 @@
 export(pattern_join)
 export(postgresql_uploader)
 export(rbinder)
+import(DBI)
 import(nycflights13)
 importFrom(dplyr,"%>%")
 importFrom(dplyr,arrange)
