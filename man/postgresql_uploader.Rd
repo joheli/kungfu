@@ -18,8 +18,8 @@ postgresql_uploader(con, r_df, pg_table, unique.field.names, update = TRUE)
 \item{update}{logical specifying whether to update existing entries as defined by \code{unique.field.names}.}
 }
 \value{
-list with information about effected inserts and updates
+\code{list} with information about effected inserts and updates
 }
 \description{
-postgresql_uploader
+A convenience function to upload contents of a \code{data.frame} object into a PostgreSQL table.
 }

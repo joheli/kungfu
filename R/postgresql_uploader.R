@@ -1,12 +1,14 @@
 #' postgresql_uploader
 #'
+#' A convenience function to upload contents of a `data.frame` object into a PostgreSQL table.
+#'
 #' @param con a `DBI::DBIConnection` object.
 #' @param r_df data.frame to be uploaded; must contain identical column names to `pg_table`.
 #' @param pg_table character specifying PostgreSQL table name.
 #' @param unique.field.names character specifying unique column names.
 #' @param update logical specifying whether to update existing entries as defined by `unique.field.names`.
 #'
-#' @return list with information about effected inserts and updates
+#' @return `list` with information about effected inserts and updates
 #' @export
 postgresql_uploader <- function(con, r_df, pg_table, unique.field.names, update = TRUE) {
   # extract field names - these *must* match postgresql table field names

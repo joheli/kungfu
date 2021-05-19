@@ -12,7 +12,14 @@
 #' @param result character; only used for debugging (in that case, pass "debug").
 #' @param ... arguments passed to function `readf`.
 #'
-#' @return a united data frame with unique entries not duplicated despite possible multiple occurrence in files
+#' @return a united `data.frame` with unique entries not duplicated despite possible multiple occurrence in files
+#' @examples
+#' # Folder 'extdata' (system.file("extdata", package = "kungfu") contains three csv-files:
+#' #> dir(system.file("extdata", package = "kungfu"))
+#' #[1] "data01.csv" "data02.csv" "data03.csv"
+#' #
+#' # To join them, run:
+#' data_combined <- rbinder("^data", read.csv, path = system.file("extdata", package = "kungfu"), unique.field.name = "id")
 #' @export
 rbinder <- function(file.pattern,
                           readf = read.csv2,
@@ -32,6 +39,7 @@ rbinder <- function(file.pattern,
   return(rtn)
 }
 
+# Helper function to read files into a list of data.frames
 batchread <- function (file.pattern,
                              readf = read.csv2,
                              path = ".",
@@ -46,13 +54,14 @@ batchread <- function (file.pattern,
   for (i in 1:length(file.names)) {
     f.name <- file.names[i]
     f.path <- f.name
-    if (path != ".") f.path <- paste0(path, f.name)
+    if (path != ".") f.path <- fs::path(path, f.name)
     d <- readf(f.path, ...)
     df.list[[f.name]] <- d
   }
   return(df.list)
 }
 
+# Helper function to join list of data.frames into a single data.frame
 rbinder2 <- function(df.list,
                      unique.field.name) {
   # stop if df.list is empty

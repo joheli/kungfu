@@ -55,7 +55,7 @@ rescale_adist <- function(x) rescale_modify(rescale10(x), "push down")
 #' named (e.g. `c("field name in data.frame x" = "field name containing patterns in data.frame y")`) or
 #' unnamed (e.g. `"field name in both x and y"`; here, both `x` and `y` contain the same column name) character.
 #'
-#' @return data.frame of merged `x` and `y` based on found similarities columns specified by `by`
+#' @return `data.frame` of merged `x` and `y` based on found similarities columns specified by argument `by`.
 #'
 #' @importFrom dplyr %>%
 #' @importFrom dplyr pull

@@ -16,7 +16,7 @@ named (e.g. \code{c("field name in data.frame x" = "field name containing patter
 unnamed (e.g. \code{"field name in both x and y"}; here, both \code{x} and \code{y} contain the same column name) character.}
 }
 \value{
-data.frame of merged \code{x} and \code{y} based on found similarities columns specified by \code{by}
+\code{data.frame} of merged \code{x} and \code{y} based on found similarities columns specified by argument \code{by}.
 }
 \description{
 Function to join two \code{data.frame} objects based on regex patterns. Unique patterns are supplied in

@@ -30,8 +30,16 @@ after uniting of files; use to avoid duplicates introduced by reading in of file
 \item{...}{arguments passed to function \code{readf}.}
 }
 \value{
-a united data frame with unique entries not duplicated despite possible multiple occurrence in files
+a united \code{data.frame} with unique entries not duplicated despite possible multiple occurrence in files
 }
 \description{
 Batch read and unite multiple data files into a single \code{data.frame}.
+}
+\examples{
+# Folder 'extdata' (system.file("extdata", package = "kungfu") contains three csv-files:
+#> dir(system.file("extdata", package = "kungfu"))
+#[1] "data01.csv" "data02.csv" "data03.csv"
+#
+# To join them, run:
+data_combined <- rbinder("^data", read.csv, path = system.file("extdata", package = "kungfu"), unique.field.name = "id")
 }
