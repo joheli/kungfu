@@ -84,7 +84,7 @@ rescale_adist <- function(x) rescale_modify(rescale10(x), "push down")
 #' # pattern_join 'airplanes' with 'model_type' by columns 'model' and 'pattern'
 #' airplanes_model_type <- pattern_join(airplanes, model_type, c("model" = "pattern"))
 
-pattern_join <- function(x, y, by) {
+pattern_join <- function(x, y, by, nomatch_label = NA) {
 
   # check arguments
   for (d in list(x, y)) if (!inherits(d, "data.frame")) stop("Please supply 'data.frame' objects for arguments 'x' and 'y'.")
@@ -99,9 +99,16 @@ pattern_join <- function(x, y, by) {
     f_y <- by
   }
 
+  # TODO: check, if a "nomatch" entry (i.e. one starting with the all-inclusive pattern ".*" exists
+  # in table 'y'
+
+  # TODO: provide loop to split a big table 'x' into smaller ones.
+
   # extract fields
   x1 <- pull(x, f_x) %>% as.character
   x2 <- pull(y, f_y) %>% as.character
+
+
 
   # calculate approximate string distances
   ad <- adist(x2, x1, fixed = F, ignore.case = T)
