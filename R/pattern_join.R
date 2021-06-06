@@ -101,12 +101,20 @@ pattern_join <- function(x, y, by, nomatch_label = NA) {
 
   # TODO: check, if a "nomatch" entry (i.e. one starting with the all-inclusive pattern ".*" exists
   # in table 'y'
+  x2 <- pull(y, f_y) %>% as.character
+
+  if (!any(grepl("^\\.\\*$", x2))) { # if "nomatch" entry does not exist, add one to 'y'
+    number_cols_y <- ncol(y)
+    names_cols_y <- colnames(y)
+    nomatch_entry <- c(".*", rep(nomatch_label, number_cols_y - 1))
+    y <- rbind(y, nomatch_entry)
+  }
 
   # TODO: provide loop to split a big table 'x' into smaller ones.
 
   # extract fields
   x1 <- pull(x, f_x) %>% as.character
-  x2 <- pull(y, f_y) %>% as.character
+
 
 
 
