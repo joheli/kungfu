@@ -140,7 +140,7 @@ pattern_join <- function(x, y, by, nomatch_label = NA, x_split_cutoff = 1000) {
 
     # compute rescaled and weighted approximate string distances (from here on abbreviated as 'rwasd')
     matches <- rs * w
-    colnames(matches) <- as.character(1:nrow(x)) # columns represent row numbers of x
+    colnames(matches) <- as.character(1:nrow(x_part)) # columns represent row numbers of x
 
     # to avoid errors of type "Undefined global functions or variables", set variables to NULL
     uniquerownumber <- uniquepatternnumber <- rwasd <- n <- pattern <- NULL
@@ -155,7 +155,7 @@ pattern_join <- function(x, y, by, nomatch_label = NA, x_split_cutoff = 1000) {
       group_by(uniquerownumber) %>%
       slice_max(rwasd, n = 1, with_ties = FALSE) %>% # do not allow more than one match
       arrange(as.numeric(uniquerownumber)) %>%
-      inner_join(mutate(x, uniquerownumber = as.character(1:n())), by = "uniquerownumber") %>% # inner_join to x
+      inner_join(mutate(x_part, uniquerownumber = as.character(1:n())), by = "uniquerownumber") %>% # inner_join to x
       inner_join(mutate(y, uniquepatternnumber = as.character(1:n())), by = "uniquepatternnumber") %>% # inner_join to y
       ungroup() %>%
       select(-uniquerownumber, -uniquepatternnumber, -rwasd, -pattern) # get rid of temporary columns
@@ -167,24 +167,8 @@ pattern_join <- function(x, y, by, nomatch_label = NA, x_split_cutoff = 1000) {
   # split a big table 'x' into smaller ones.
   x_split <- splitter(x, maxrows = x_split_cutoff)
 
-  # determine no. of cores
-  n.cores <- parallel::detectCores()
-
-  # helper function for pbapply
-  prl <- function(cl) pbapply::pblapply(X = x_split, FUN = joiner, cl = cl)
-
-  # detect if OS is windows
-  onwindows = grepl("windows", .Platform$OS.type, ignore.case = T)
-
-  # process differs by OS
-  if (onwindows) {
-    cl <- parallel::makeCluster(n.cores)
-    result <- prl(cl = cl)
-    parallel::stopCluster(cl)
-  } else {
-    ##  on other os 'cl' can be an integer:
-    result <- prl(cl = n.cores)
-  }
+  # join
+  result <- lapply(x_split, joiner)
 
   # rbind pieces together
   return(Reduce(rbind, result, data.frame()))
