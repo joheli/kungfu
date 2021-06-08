@@ -4,7 +4,7 @@
 \alias{pattern_join}
 \title{pattern_join}
 \usage{
-pattern_join(x, y, by)
+pattern_join(x, y, by, nomatch_label = NA, x_split_cutoff = 1000)
 }
 \arguments{
 \item{x}{data.frame}
@@ -14,6 +14,13 @@ pattern_join(x, y, by)
 \item{by}{character of length 1, specifying either names of corresponding field names in a
 named (e.g. \code{c("field name in data.frame x" = "field name containing patterns in data.frame y")}) or
 unnamed (e.g. \code{"field name in both x and y"}; here, both \code{x} and \code{y} contain the same column name) character.}
+
+\item{nomatch_label}{character or \code{NA}, specifying values joined to entries in \code{x} that do not
+have corresponding match in \code{y}}
+
+\item{x_split_cutoff}{integer specifying number of rows above which \code{x} is split into smaller
+\code{data.frame} objects; this is necessary, as the joining algorithm cannot handle data.frames with
+many thousand rows.}
 }
 \value{
 \code{data.frame} of merged \code{x} and \code{y} based on found similarities columns specified by argument \code{by}.
@@ -27,10 +34,9 @@ the second \code{data.frame} object.
 set.seed(1)
 # extract twenty rows of nycflights13::planes
 airplanes <- nycflights13::planes \%>\% slice(sample(1:nrow(nycflights13::planes), 20))
-# model_type is really just a stupid pattern map, please don't pay attention to the content; notice
-# that pattern ".*" is a catchall for those entries in 'x' that don't have a better match in 'y'
-model_type <- tibble(pattern = c("PA-32", "EMB-145", "7[2-8]7", "A320", ".*"),
-                     model_type = c("Piper 32", "Embraer 145", "Boeing 7X7", "Airbus 320", "no clue at all!"))
+# model_type is really just a stupid pattern map, please don't pay attention to the content.
+model_type <- tibble(pattern = c("PA-32", "EMB-145", "7[2-8]7", "A320"),
+                     model_type = c("Piper 32", "Embraer 145", "Boeing 7X7", "Airbus 320"))
 # pattern_join 'airplanes' with 'model_type' by columns 'model' and 'pattern'
 airplanes_model_type <- pattern_join(airplanes, model_type, c("model" = "pattern"))
 }
