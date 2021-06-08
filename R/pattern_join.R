@@ -42,6 +42,14 @@ rescale_modify <- function(x, modification = c("none", "pull up", "push down")) 
 # the rescale function for matchmaker
 rescale_adist <- function(x) rescale_modify(rescale10(x), "push down")
 
+# split large data.frame into parts using dplyr::group_split
+splitter <- function(d, maxrows = 1000) {
+  parts <- ceiling(nrow(d)/maxrows)
+  g <- d %>% mutate(gr = rep_len(1:parts, length.out = nrow(d))) %>%
+    group_by(gr)
+  group_split(g, .keep = FALSE)
+}
+
 ## Function pattern_join
 
 #' pattern_join
@@ -84,7 +92,7 @@ rescale_adist <- function(x) rescale_modify(rescale10(x), "push down")
 #' # pattern_join 'airplanes' with 'model_type' by columns 'model' and 'pattern'
 #' airplanes_model_type <- pattern_join(airplanes, model_type, c("model" = "pattern"))
 
-pattern_join <- function(x, y, by, nomatch_label = NA) {
+pattern_join <- function(x, y, by, nomatch_label = NA, x_split_cutoff = 1000) {
 
   # check arguments
   for (d in list(x, y)) if (!inherits(d, "data.frame")) stop("Please supply 'data.frame' objects for arguments 'x' and 'y'.")
@@ -101,6 +109,7 @@ pattern_join <- function(x, y, by, nomatch_label = NA) {
 
   # TODO: check, if a "nomatch" entry (i.e. one starting with the all-inclusive pattern ".*" exists
   # in table 'y'
+  # x1 is dealt with below
   x2 <- pull(y, f_y) %>% as.character
 
   if (!any(grepl("^\\.\\*$", x2))) { # if "nomatch" entry does not exist, add one to 'y'
@@ -111,44 +120,45 @@ pattern_join <- function(x, y, by, nomatch_label = NA) {
   }
 
   # TODO: provide loop to split a big table 'x' into smaller ones.
+  x_split <- splitter(x, maxrows = x_split_cutoff)
 
-  # extract fields
-  x1 <- pull(x, f_x) %>% as.character
+  # function that does the joining
+  joiner <- function(x_part) {
+    # extract fields
+    x1 <- pull(x_part, f_x) %>% as.character
 
+    # calculate approximate string distances
+    ad <- adist(x2, x1, fixed = F, ignore.case = T)
 
+    # rescale string distances
+    rs <- t(apply(ad, 1, rescale_adist))
 
+    # calculate weights of string distances (smaller the shorter a possible string overlap)
+    w <- matrix(nchar(x2), ncol=1) %*% (1/nchar(x1))
 
-  # calculate approximate string distances
-  ad <- adist(x2, x1, fixed = F, ignore.case = T)
+    # compute rescaled and weighted approximate string distances (from here on abbreviated as 'rwasd')
+    matches <- rs * w
+    colnames(matches) <- as.character(1:nrow(x)) # columns represent row numbers of x
 
-  # rescale string distances
-  rs <- t(apply(ad, 1, rescale_adist))
+    # to avoid errors of type "Undefined global functions or variables", set variables to NULL
+    uniquerownumber <- uniquepatternnumber <- rwasd <- n <- pattern <- NULL
 
-  # calculate weights of string distances (smaller the shorter a possible string overlap)
-  w <- matrix(nchar(x2), ncol=1) %*% (1/nchar(x1))
+    # convert matrix to data.frame
+    matches_d <- matches %>%
+      as.data.frame %>%
+      mutate(uniquepatternnumber = as.character(1:nrow(y))) %>%
+      pivot_longer(-uniquepatternnumber, # convert to long format
+                   names_to = "uniquerownumber",
+                   values_to = "rwasd") %>%
+      group_by(uniquerownumber) %>%
+      slice_max(rwasd, n = 1, with_ties = FALSE) %>% # do not allow more than one match
+      arrange(as.numeric(uniquerownumber)) %>%
+      inner_join(mutate(x, uniquerownumber = as.character(1:n())), by = "uniquerownumber") %>% # inner_join to x
+      inner_join(mutate(y, uniquepatternnumber = as.character(1:n())), by = "uniquepatternnumber") %>% # inner_join to y
+      ungroup() %>%
+      select(-uniquerownumber, -uniquepatternnumber, -rwasd, -pattern) # get rid of temporary columns
 
-  # compute rescaled and weighted approximate string distances (from here on abbreviated as 'rwasd')
-  matches <- rs * w
-  colnames(matches) <- as.character(1:nrow(x)) # columns represent row numbers of x
-
-  # to avoid errors of type "Undefined global functions or variables", set variables to NULL
-  uniquerownumber <- uniquepatternnumber <- rwasd <- n <- pattern <- NULL
-
-  # convert matrix to data.frame
-  matches_d <- matches %>%
-    as.data.frame %>%
-    mutate(uniquepatternnumber = as.character(1:nrow(y))) %>%
-    pivot_longer(-uniquepatternnumber, # convert to long format
-                 names_to = "uniquerownumber",
-                 values_to = "rwasd") %>%
-    group_by(uniquerownumber) %>%
-    slice_max(rwasd, n = 1, with_ties = FALSE) %>% # do not allow more than one match
-    arrange(as.numeric(uniquerownumber)) %>%
-    inner_join(mutate(x, uniquerownumber = as.character(1:n())), by = "uniquerownumber") %>% # inner_join to x
-    inner_join(mutate(y, uniquepatternnumber = as.character(1:n())), by = "uniquepatternnumber") %>% # inner_join to y
-    ungroup() %>%
-    select(-uniquerownumber, -uniquepatternnumber, -rwasd, -pattern) # get rid of temporary columns
-
-  # return
-  matches_d
+    # return
+    matches_d
+  }
 }
