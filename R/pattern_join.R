@@ -62,7 +62,11 @@ splitter <- function(d, maxrows = 1000) {
 #' @param by character of length 1, specifying either names of corresponding field names in a
 #' named (e.g. `c("field name in data.frame x" = "field name containing patterns in data.frame y")`) or
 #' unnamed (e.g. `"field name in both x and y"`; here, both `x` and `y` contain the same column name) character.
-#'
+#' @param nomatch_label character or `NA`, specifying values joined to entries in `x` that do not
+#' have corresponding match in `y`
+#' @param x_split_cutoff integer specifying number of rows above which `x` is split into smaller
+#' `data.frame` objects; this is necessary, as the joining algorithm cannot handle data.frames with
+#' many thousand rows.
 #' @return `data.frame` of merged `x` and `y` based on found similarities columns specified by argument `by`.
 #'
 #' @importFrom dplyr %>%
@@ -85,10 +89,9 @@ splitter <- function(d, maxrows = 1000) {
 #' set.seed(1)
 #' # extract twenty rows of nycflights13::planes
 #' airplanes <- nycflights13::planes %>% slice(sample(1:nrow(nycflights13::planes), 20))
-#' # model_type is really just a stupid pattern map, please don't pay attention to the content; notice
-#' # that pattern ".*" is a catchall for those entries in 'x' that don't have a better match in 'y'
-#' model_type <- tibble(pattern = c("PA-32", "EMB-145", "7[2-8]7", "A320", ".*"),
-#'                      model_type = c("Piper 32", "Embraer 145", "Boeing 7X7", "Airbus 320", "no clue at all!"))
+#' # model_type is really just a stupid pattern map, please don't pay attention to the content.
+#' model_type <- tibble(pattern = c("PA-32", "EMB-145", "7[2-8]7", "A320"),
+#'                      model_type = c("Piper 32", "Embraer 145", "Boeing 7X7", "Airbus 320"))
 #' # pattern_join 'airplanes' with 'model_type' by columns 'model' and 'pattern'
 #' airplanes_model_type <- pattern_join(airplanes, model_type, c("model" = "pattern"))
 
@@ -117,10 +120,9 @@ pattern_join <- function(x, y, by, nomatch_label = NA, x_split_cutoff = 1000) {
     names_cols_y <- colnames(y)
     nomatch_entry <- c(".*", rep(nomatch_label, number_cols_y - 1))
     y <- rbind(y, nomatch_entry)
+  } else {
+    message("'y' already contains a 'nomatch' entry.")
   }
-
-  # TODO: provide loop to split a big table 'x' into smaller ones.
-  x_split <- splitter(x, maxrows = x_split_cutoff)
 
   # function that does the joining
   joiner <- function(x_part) {
@@ -161,4 +163,29 @@ pattern_join <- function(x, y, by, nomatch_label = NA, x_split_cutoff = 1000) {
     # return
     matches_d
   }
+
+  # split a big table 'x' into smaller ones.
+  x_split <- splitter(x, maxrows = x_split_cutoff)
+
+  # determine no. of cores
+  n.cores <- parallel::detectCores()
+
+  # helper function for pbapply
+  prl <- function(cl) pbapply::pblapply(X = x_split, FUN = joiner, cl = cl)
+
+  # detect if OS is windows
+  onwindows = grepl("windows", .Platform$OS.type, ignore.case = T)
+
+  # process differs by OS
+  if (onwindows) {
+    cl <- parallel::makeCluster(n.cores)
+    result <- prl(cl = cl)
+    parallel::stopCluster(cl)
+  } else {
+    ##  on other os 'cl' can be an integer:
+    result <- prl(cl = n.cores)
+  }
+
+  # rbind pieces together
+  return(Reduce(rbind, result, data.frame()))
 }
