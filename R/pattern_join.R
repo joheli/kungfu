@@ -141,7 +141,7 @@ pattern_join <- function(x, y, by, nomatch_label = NA, x_split_cutoff = 500, mul
     ad <- adist(x2, x1, fixed = F, ignore.case = T)
 
     # rescale string distances
-    rs <- t(apply(ad, 1, rescale_adist))
+    rs <- apply(ad, 2, rescale_adist)
 
     # calculate weights of string distances (smaller the shorter a possible string overlap)
     w <- matrix(nchar(x2), ncol=1) %*% (1/nchar(x1))
