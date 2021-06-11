@@ -4,15 +4,22 @@
 \alias{pattern_join}
 \title{pattern_join}
 \usage{
-pattern_join(x, y, by, nomatch_label = NA, x_split_cutoff = 1000)
+pattern_join(
+  x,
+  y,
+  by,
+  nomatch_label = NA,
+  x_split_cutoff = 500,
+  multicore = TRUE
+)
 }
 \arguments{
-\item{x}{data.frame}
+\item{x}{the first \code{data.frame}}
 
-\item{y}{data.frame containing a column with regex patterns}
+\item{y}{the second \code{data.frame} containing a column with \emph{regex} patterns}
 
 \item{by}{character of length 1, specifying either names of corresponding field names in a
-named (e.g. \code{c("field name in data.frame x" = "field name containing patterns in data.frame y")}) or
+named (e.g. \code{c("field name in x" = "field name containing patterns in y")}) or
 unnamed (e.g. \code{"field name in both x and y"}; here, both \code{x} and \code{y} contain the same column name) character.}
 
 \item{nomatch_label}{character or \code{NA}, specifying values joined to entries in \code{x} that do not
@@ -21,13 +28,18 @@ have corresponding match in \code{y}}
 \item{x_split_cutoff}{integer specifying number of rows above which \code{x} is split into smaller
 \code{data.frame} objects; this is necessary, as the joining algorithm cannot handle data.frames with
 many thousand rows.}
+
+\item{multicore}{logical specifying if multiple cores should be used or not; it defaults to \code{TRUE}, although
+benefits in speed only arise if \code{nrow(x)} \emph{is substantially greater} than \code{x_split_cutoff}.}
 }
 \value{
 \code{data.frame} of merged \code{x} and \code{y} based on found similarities columns specified by argument \code{by}.
 }
 \description{
-Function to join two \code{data.frame} objects based on regex patterns. Unique patterns are supplied in
-the second \code{data.frame} object.
+Function to join two \code{data.frame} objects based on \emph{regex} patterns. The \emph{first} \code{data.frame}
+contains a \emph{dirty} column (e.g. "real-world" data originating from a free text field) that needs grouping.
+The \emph{second} \code{data.frame} maps its rows to above mentioned \emph{dirty} column using the unique patterns contained in
+one of its own columns.
 }
 \examples{
 # set seed to make it reproducible

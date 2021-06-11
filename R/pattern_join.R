@@ -54,19 +54,23 @@ splitter <- function(d, maxrows = 1000) {
 
 #' pattern_join
 #'
-#' Function to join two `data.frame` objects based on regex patterns. Unique patterns are supplied in
-#' the second `data.frame` object.
+#' Function to join two `data.frame` objects based on \emph{regex} patterns. The \emph{first} `data.frame`
+#' contains a \emph{dirty} column (e.g. "real-world" data originating from a free text field) that needs grouping.
+#' The \emph{second} `data.frame` maps its rows to above mentioned \emph{dirty} column using the unique patterns contained in
+#' one of its own columns.
 #'
-#' @param x data.frame
-#' @param y data.frame containing a column with regex patterns
+#' @param x the first `data.frame`
+#' @param y the second `data.frame` containing a column with \emph{regex} patterns
 #' @param by character of length 1, specifying either names of corresponding field names in a
-#' named (e.g. `c("field name in data.frame x" = "field name containing patterns in data.frame y")`) or
+#' named (e.g. `c("field name in x" = "field name containing patterns in y")`) or
 #' unnamed (e.g. `"field name in both x and y"`; here, both `x` and `y` contain the same column name) character.
 #' @param nomatch_label character or `NA`, specifying values joined to entries in `x` that do not
 #' have corresponding match in `y`
 #' @param x_split_cutoff integer specifying number of rows above which `x` is split into smaller
 #' `data.frame` objects; this is necessary, as the joining algorithm cannot handle data.frames with
 #' many thousand rows.
+#' @param multicore logical specifying if multiple cores should be used or not; it defaults to `TRUE`, although
+#' benefits in speed only arise if `nrow(x)` \emph{is substantially greater} than `x_split_cutoff`.
 #' @return `data.frame` of merged `x` and `y` based on found similarities columns specified by argument `by`.
 #'
 #' @importFrom dplyr %>%
@@ -95,7 +99,7 @@ splitter <- function(d, maxrows = 1000) {
 #' # pattern_join 'airplanes' with 'model_type' by columns 'model' and 'pattern'
 #' airplanes_model_type <- pattern_join(airplanes, model_type, c("model" = "pattern"))
 
-pattern_join <- function(x, y, by, nomatch_label = NA, x_split_cutoff = 1000) {
+pattern_join <- function(x, y, by, nomatch_label = NA, x_split_cutoff = 500, multicore = TRUE) {
 
   # check arguments
   for (d in list(x, y)) if (!inherits(d, "data.frame")) stop("Please supply 'data.frame' objects for arguments 'x' and 'y'.")
@@ -116,10 +120,14 @@ pattern_join <- function(x, y, by, nomatch_label = NA, x_split_cutoff = 1000) {
   x2 <- pull(y, f_y) %>% as.character
 
   if (!any(grepl("^\\.\\*$", x2))) { # if "nomatch" entry does not exist, add one to 'y'
+    jokerpattern <- ".*" # this pattern matches all
     number_cols_y <- ncol(y)
     names_cols_y <- colnames(y)
-    nomatch_entry <- c(".*", rep(nomatch_label, number_cols_y - 1))
+    nomatch_entry <- c(jokerpattern, rep(nomatch_label, number_cols_y - 1))
+    # y is added the row 'nomatch_entry':
     y <- rbind(y, nomatch_entry)
+    # x2 also has to be updated:
+    x2 <- c(x2, jokerpattern)
   } else {
     message("'y' already contains a 'nomatch' entry.")
   }
@@ -149,13 +157,13 @@ pattern_join <- function(x, y, by, nomatch_label = NA, x_split_cutoff = 1000) {
     matches_d <- matches %>%
       as.data.frame %>%
       mutate(uniquepatternnumber = as.character(1:nrow(y))) %>%
-      pivot_longer(-uniquepatternnumber, # convert to long format
+      tidyr::pivot_longer(-uniquepatternnumber, # convert to long format
                    names_to = "uniquerownumber",
                    values_to = "rwasd") %>%
       group_by(uniquerownumber) %>%
       slice_max(rwasd, n = 1, with_ties = FALSE) %>% # do not allow more than one match
       arrange(as.numeric(uniquerownumber)) %>%
-      inner_join(mutate(x_part, uniquerownumber = as.character(1:n())), by = "uniquerownumber") %>% # inner_join to x
+      inner_join(mutate(x_part, uniquerownumber = as.character(1:n())), by = "uniquerownumber") %>% # inner_join to x_part
       inner_join(mutate(y, uniquepatternnumber = as.character(1:n())), by = "uniquepatternnumber") %>% # inner_join to y
       ungroup() %>%
       select(-uniquerownumber, -uniquepatternnumber, -rwasd, -pattern) # get rid of temporary columns
@@ -167,9 +175,52 @@ pattern_join <- function(x, y, by, nomatch_label = NA, x_split_cutoff = 1000) {
   # split a big table 'x' into smaller ones.
   x_split <- splitter(x, maxrows = x_split_cutoff)
 
-  # join
-  result <- lapply(x_split, joiner)
+  # if 'multicore' evaluates to TRUE, use parallel processing
+  if (!multicore) {
+    # join
+    result <- lapply(x_split, joiner)
+  } else {
+    # determine no. of cores
+    n.cores <- parallel::detectCores()
+
+    # helper function for pbapply
+    prl <- function(cl) pbapply::pblapply(X = x_split, FUN = joiner, cl = cl)
+
+    # detect if OS is windows
+    onwindows = grepl("windows", .Platform$OS.type, ignore.case = TRUE)
+
+    # process differs by OS
+    if (onwindows) {
+      cl <- parallel::makeCluster(n.cores)
+      result <- prl(cl = cl)
+      parallel::stopCluster(cl)
+    } else {
+      ##  on other os 'cl' can be an integer:
+      result <- prl(cl = n.cores)
+    }
+  }
 
   # rbind pieces together
   return(Reduce(rbind, result, data.frame()))
 }
+
+# for comparing parallel vs. single core computing:
+
+pattern_join_p <- function(x, y, by, nomatch_label = NA, x_split_cutoff = 1000) {
+  pattern_join(x = x, y = y, by = by, nomatch_label = nomatch_label, x_split_cutoff = x_split_cutoff, multicore = TRUE)
+}
+
+pattern_join_m <- function(x, y, by, nomatch_label = NA, x_split_cutoff = 1000) {
+  pattern_join(x = x, y = y, by = by, nomatch_label = nomatch_label, x_split_cutoff = x_split_cutoff, multicore = FALSE)
+}
+
+# # Test usefulness of parallel computing:
+# airplanes3 <- nycflights13::planes # contains 3322 rows
+# bench::mark(pattern_join_m(airplanes3, model_type, c("model" = "pattern")),
+#             pattern_join_p(airplanes3, model_type, c("model" = "pattern")), memory = FALSE)
+# # # OUTPUT
+# # # A tibble: 2 x 13
+# # expression                                                      min median `itr/sec` mem_alloc `gc/sec` n_itr  n_gc total_time
+# # <bch:expr>                                                   <bch:> <bch:>     <dbl> <bch:byt>    <dbl> <int> <dbl>   <bch:tm>
+# #   1 pattern_join_m(airplanes3, model_type, c(model = "pattern"))  607ms  607ms      1.65        NA     9.89     1     6      607ms
+# #   2 pattern_join_p(airplanes3, model_type, c(model = "pattern"))  249ms  252ms      3.96        NA    17.8      2     9      505ms
