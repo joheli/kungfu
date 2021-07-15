@@ -17,8 +17,7 @@
 #' @import dplyr
 #' @import lubridate
 #' @import fuzzyjoin
-#' @import utils
-#' @import glue
+#' @importFrom rlang :=
 #'
 #' @rdname seamless
 #'
@@ -50,8 +49,10 @@ is_seamless <- function(d, start = start, stop = stop) {
 #' @return \code{seamless} returns a \code{tibble} that is seamless, i.e. satisfies \code{is_seamless}
 #' @examples
 #' # hx can, however, be converted
+#' \dontrun{
 #' sl_hx <- seamless(hx)
 #' is_seamless(sl_hx) # returns TRUE
+#' }
 seamless <- function(d, start = start, stop = stop) {
   r <- nrow(d)
   if (r < 2) return(d) # return 'd' for tables containing only one row

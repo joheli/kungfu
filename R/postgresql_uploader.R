@@ -11,6 +11,7 @@
 #' @return `list` with information about effected inserts and updates
 #'
 #' @import DBI
+#' @import RPostgreSQL
 #'
 #' @export
 postgresql_uploader <- function(con, r_df, pg_table, unique.field.names, update = TRUE) {
