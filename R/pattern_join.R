@@ -45,6 +45,8 @@ rescale_adist <- function(x) rescale_modify(rescale10(x), "push down")
 # split large data.frame into parts using dplyr::group_split
 splitter <- function(d, maxrows = 1000) {
   parts <- ceiling(nrow(d)/maxrows)
+  # to avoid errors of type "Undefined global functions or variables", set variables to NULL
+  gr <- NULL
   g <- d %>% mutate(gr = rep_len(1:parts, length.out = nrow(d))) %>%
     group_by(gr)
   group_split(g, .keep = FALSE)

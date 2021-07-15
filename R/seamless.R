@@ -17,6 +17,8 @@
 #' @import dplyr
 #' @import lubridate
 #' @import fuzzyjoin
+#' @import utils
+#' @import glue
 #'
 #' @rdname seamless
 #'
@@ -30,12 +32,11 @@
 #' # generate intervals in seconds
 #' ir <- rn + runif(3, 0, 1e6)
 #' # generate random history `hx` (table)
-#' hx <- data.frame(unit = letters[1:3], start = as.POSIXlt(rn, origin = "2021-01-01 00:00:00"), stop = as.POSIXlt(ir, origin = "2021-01-01 00:00:00"))
+#' hx <- data.frame(unit = letters[1:3],
+#' start = as.POSIXlt(rn, origin = "2021-01-01 00:00:00"),
+#' stop = as.POSIXlt(ir, origin = "2021-01-01 00:00:00"))
 #' # hx is expected to not be seamless
 #' is_seamless(hx) # returns FALSE
-#' # hx can, however, be converted
-#' sl_hx <- seamless(hx)
-#' is_seamless(sl_hx) # returns TRUE
 is_seamless <- function(d, start = start, stop = stop) {
   if (nrow(d) < 2) return(TRUE) # Any table with only one row is seamless.
   ro <- arrange(d, {{start}}, {{stop}})
@@ -47,6 +48,10 @@ is_seamless <- function(d, start = start, stop = stop) {
 
 #' @rdname seamless
 #' @return \code{seamless} returns a \code{tibble} that is seamless, i.e. satisfies \code{is_seamless}
+#' @examples
+#' # hx can, however, be converted
+#' sl_hx <- seamless(hx)
+#' is_seamless(sl_hx) # returns TRUE
 seamless <- function(d, start = start, stop = stop) {
   r <- nrow(d)
   if (r < 2) return(d) # return 'd' for tables containing only one row
@@ -54,6 +59,9 @@ seamless <- function(d, start = start, stop = stop) {
   start_tp <- pull(d, {{start}})
   stop_tp <- pull(d, {{stop}})
   if (!all((stop_tp - start_tp) > 0)) stop("{{start}} has to be smaller than {{stop}}")
+
+  # to avoid errors of type "Undefined global functions or variables", set variables to NULL
+  a <- b <- rownumber <- movement <- dur <- NULL
 
   # Calculate duration 'dur'
   dd <- mutate(d, rownumber = 1:nrow(d)) %>%

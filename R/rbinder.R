@@ -12,6 +12,8 @@
 #' @param result character; only used for debugging (in that case, pass "debug").
 #' @param ... arguments passed to function `readf`.
 #'
+#' @import utils
+#'
 #' @return a united `data.frame` with unique entries not duplicated despite possible multiple occurrence in files
 #' @examples
 #' # Folder 'extdata' (system.file("extdata", package = "kungfu") contains three csv-files:
