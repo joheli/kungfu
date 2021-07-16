@@ -5,16 +5,16 @@
 \alias{is_seamless}
 \title{is_seamless, seamless}
 \usage{
-is_seamless(d, start = start, stop = stop)
+is_seamless(d, begin = begin, end = end)
 
-seamless(d, start = start, stop = stop)
+seamless(d, begin = begin, end = end)
 }
 \arguments{
 \item{d}{table}
 
-\item{start}{\code{tidyr} selector specifying column containing \emph{start} timepoints}
+\item{begin}{\code{tidyr} selector specifying column containing \emph{begin} timepoints}
 
-\item{stop}{\code{tidyr} selector specifying column containing \emph{stop} timeponts}
+\item{end}{\code{tidyr} selector specifying column containing \emph{end} timeponts}
 }
 \value{
 \code{is_seamless} returns a logical stating whether history is seamless or not
@@ -35,10 +35,15 @@ rn <- runif(3, 0, 1e6)
 # generate intervals in seconds
 ir <- rn + runif(3, 0, 1e6)
 # generate random history `hx` (table)
-hx <- data.frame(unit = letters[1:3], start = as.POSIXlt(rn, origin = "2021-01-01 00:00:00"), stop = as.POSIXlt(ir, origin = "2021-01-01 00:00:00"))
+hx <- data.frame(unit = letters[1:3],
+begin = as.POSIXlt(rn, origin = "2021-01-01 00:00:00"),
+end = as.POSIXlt(ir, origin = "2021-01-01 00:00:00"))
 # hx is expected to not be seamless
 is_seamless(hx) # returns FALSE
+
 # hx can, however, be converted
+\dontrun{
 sl_hx <- seamless(hx)
 is_seamless(sl_hx) # returns TRUE
+}
 }

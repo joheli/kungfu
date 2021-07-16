@@ -88,6 +88,8 @@ splitter <- function(d, maxrows = 1000) {
 #' @importFrom utils adist
 #' @import nycflights13
 #'
+#' @seealso \code{pattern_join} is similar to \link[fuzzyjoin]{regex_join}
+#'
 #' @export
 #'
 #' @examples

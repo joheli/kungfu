@@ -1,6 +1,6 @@
 Package: kungfu
 Title: kungfu - kicks stubborn data into shape
-Version: 0.0.8
+Version: 0.0.9
 Authors@R: 
     person(given = "Johannes",
            family = "Elias",
@@ -17,6 +17,7 @@ Imports: DBI (>= 1.1.1),
          fs (>= 1.5.0),
          fuzzyjoin (>= 0.1.6),
          glue (>= 1.4.2),
+         janitor (>= 2.1.0),
          lubridate (>= 1.7.10),
          nycflights13 (>= 1.0.1),
          parallel (>= 4.0.4),

@@ -52,3 +52,6 @@ model_type <- tibble(pattern = c("PA-32", "EMB-145", "7[2-8]7", "A320"),
 # pattern_join 'airplanes' with 'model_type' by columns 'model' and 'pattern'
 airplanes_model_type <- pattern_join(airplanes, model_type, c("model" = "pattern"))
 }
+\seealso{
+\code{pattern_join} is similar to \link[fuzzyjoin]{regex_join}
+}
