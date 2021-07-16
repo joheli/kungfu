@@ -10,7 +10,7 @@ Please install package [devtools](https://cran.r-project.org/web/packages/devtoo
 ## Contents
 
 Presently, the package contains the following functions:
-  -  `pattern_join`: joins to tables according to a regex pattern; it is similar, and probably inferior to function `regex_join` in package [fuzzyjoin](https://github.com/dgrtwo/fuzzyjoin), which I discovered only after writing `pattern_join`
+  -  `pattern_join`: joins two tables according to a regex pattern; it is similar, and probably inferior to function `regex_join` in package [fuzzyjoin](https://github.com/dgrtwo/fuzzyjoin), which I discovered only after writing `pattern_join`
   - `postgresql_uploader`: helps with the uploading of tables to a PostgreSQL database
   - `rbinder`: convenience function for importing and joining of multiple csv-like files that have identical headers
   - `seamless`: attempts to convert a table of intervals into a "seamless" succession of intervals
