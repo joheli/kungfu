@@ -98,6 +98,7 @@ seamless <- function(d, begin = begin, end = end) {
     mutate(k = c(0, diff(z))) %>%
     filter(k <= 1) %>%
     group_by(across(all_of(clnms_group)))
+  # TODO: group by "unit" *and* contiguous group <- how to identify?
 
   d5 <- d4 %>%
     filter(!(z %in% to_be_merged$z)) %>%
