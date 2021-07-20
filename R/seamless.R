@@ -25,13 +25,13 @@
 #'
 #' @examples
 #' # set seed to make it reproducible
-#' set.seed(1)
-#' # generate three random numbers between 0 and 1e6
-#' rn <- runif(3, 0, 1e6)
+#' set.seed(3)
+#' # generate random numbers between 0 and 1e6
+#' rn <- runif(5, 0, 1e6)
 #' # generate intervals in seconds
-#' ir <- rn + runif(3, 0, 1e6)
+#' ir <- rn + runif(5, 0, 1e6)
 #' # generate random history `hx` (table)
-#' hx <- data.frame(unit = letters[1:3],
+#' hx <- data.frame(unit = sample(letters[1:3], 5, TRUE),
 #' begin = as.POSIXlt(rn, origin = "2021-01-01 00:00:00"),
 #' end = as.POSIXlt(ir, origin = "2021-01-01 00:00:00"))
 #' # hx is expected to not be seamless
@@ -67,7 +67,7 @@ seamless <- function(d, begin = begin, end = end) {
   if (!all((stop_tp - start_tp) > 0)) stop("'begin' has to be smaller than 'end'!")
 
   # to avoid errors of type "Undefined global functions or variables", set variables to NULL
-  a <- b <- rownumber <- movement <- dur <- NULL
+  a <- b <- rownumber <- movement <- dur <- .gr <- .grd <- .grf <- .grp <- NULL
 
   # Calculate duration 'dur'
   dd <- mutate(d, rownumber = 1:nrow(d)) %>%
@@ -91,22 +91,17 @@ seamless <- function(d, begin = begin, end = end) {
     select(-ends_with("y"), -movement, -rownumber, -dur) # remove not needed columns
   colnames(d3) <- gsub("\\.x$", "", colnames(d3)) # remove suffixes '.x' from column names
 
-  # are there congiguous intervals that need merging?
-  d4 <- d3 %>% mutate(z = 1:nrow(d3))
-  to_be_merged <- d4 %>%
-    get_dupes(-c({{begin}}, {{end}}, z)) %>%
-    mutate(k = c(0, diff(z))) %>%
-    filter(k <= 1) %>%
-    group_by(across(all_of(clnms_group)))
-  # TODO: group by "unit" *and* contiguous group <- how to identify?
+  # simplify: merge contiguous intervals if all other columns same
+  d4 <- d3 %>%
+    unite(".gr", all_of(clnms_group), remove = FALSE) %>% # create temporary column uniting all non-temporal columns
+    mutate(.grf = as.numeric(factor(.gr))) %>%  # convert to factor
+    mutate(.grd = c(1, diff(.grf))) %>%         # calculate differences; values != 0 represent changes from one factor to next
+    mutate(.grp = cumsum(.grd != 0)) %>%        # .grp designates temporally contiguous entries of .gr
+    group_by(.grp, across(all_of(clnms_group))) %>% # add .grp to grouping of non-temporal columns
+    summarise("{{begin}}" := min({{begin}}, na.rm = TRUE), "{{end}}" := max({{end}}, na.rm = T), .groups = "drop") %>% # merge
+    select(-.grp) %>% # remove .grp
+    select(all_of(clnms)) # return in identical order as 'd'
 
-  d5 <- d4 %>%
-    filter(!(z %in% to_be_merged$z)) %>%
-    select(all_of(clnms))
-
-  d6 <- to_be_merged %>%
-    summarise("{{begin}}" := min({{begin}}, na.rm = TRUE), "{{end}}" := max({{end}}, na.rm = T)) %>%
-    select(all_of(clnms))
-
-  rbind(d5, d6)
+  # return
+  d4
 }

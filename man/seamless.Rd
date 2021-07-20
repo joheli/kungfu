@@ -29,13 +29,13 @@ succeeding intervals. Conversion of a not seamless into a seamless history can b
 }
 \examples{
 # set seed to make it reproducible
-set.seed(1)
-# generate three random numbers between 0 and 1e6
-rn <- runif(3, 0, 1e6)
+set.seed(3)
+# generate random numbers between 0 and 1e6
+rn <- runif(5, 0, 1e6)
 # generate intervals in seconds
-ir <- rn + runif(3, 0, 1e6)
+ir <- rn + runif(5, 0, 1e6)
 # generate random history `hx` (table)
-hx <- data.frame(unit = letters[1:3],
+hx <- data.frame(unit = sample(letters[1:3], 5, TRUE),
 begin = as.POSIXlt(rn, origin = "2021-01-01 00:00:00"),
 end = as.POSIXlt(ir, origin = "2021-01-01 00:00:00"))
 # hx is expected to not be seamless

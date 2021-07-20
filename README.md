@@ -1,7 +1,7 @@
 [![R-CMD-check](https://github.com/joheli/kungfu/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/joheli/kungfu/actions/workflows/R-CMD-check.yaml)
 # kungfu
 
-This R-package contains functions that I use for the cleaning of "dirty" data. 
+This R-package contains functions that I use for the cleaning and transforming of "dirty" data. 
 
 ## Install
 
