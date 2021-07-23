@@ -50,6 +50,8 @@ is_seamless <- function(d, begin = begin, end = end) {
 #'
 #' @return \code{seamless} returns a \code{tibble} that is seamless, i.e. satisfies \code{is_seamless}
 #'
+#' @export
+#'
 #' @examples
 #' # hx can, however, be converted
 #' \dontrun{
