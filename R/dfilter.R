@@ -33,34 +33,6 @@ dist2df <- function(x) {
   return(dl)
 }
 
-noise <- function(x, small = 1000) {
-  # Argument validation
-  if (!inherits(x, c("numeric", "integer"))) stop("Please supply a numeric or integer.")
-  if (length(x) < 2) stop("Please supply a numeric vector of length 2 or more.")
-
-  # Are there duplicates?
-  dp <- length(unique(x)) < length(x)
-
-  # if duplicates present, add small noise to each
-  if (dp) {
-    # determine minimum difference between entries
-    mindiff <- min(diff(sort(unique(x))))
-
-    # create small term 'ms'
-    ms <- mindiff/small
-
-    # create noise
-    noise <- runif(length(x), min = -ms/2, max = ms/2)
-
-    # return x + added noise
-    return(x + noise)
-
-  } else {
-    # if no duplicates, return x unchanged
-    return(x)
-  }
-}
-
 chunks <- function(x, max.distance = NULL,
                    which.chunk = c("all", "biggest", "first", "random")) {
   # empty result objects
@@ -130,6 +102,37 @@ chunks <- function(x, max.distance = NULL,
          random = x[cuts == random.cut])
 }
 
+#' Distance filter
+#'
+#' Filter entries of a vector \code{d} of class \code{numeric}, \code{integer}, \code{Date}, or \code{POSIXt}
+#' according to maximal distance \code{max.dist}.
+#'
+#' @param d a \code{numeric}, \code{integer}, \code{Date}, or \code{POSIXt}
+#' @param max.dist \code{numeric} specifying maximal distance entries in \code{d} are allowed to have to be retained
+#' @param temporal.unit only applies, if \code{d} is of class \code{Date} or \code{POSIXt}; accepted values are "day", "second", "minute", "week", "year".
+#' @param which.chunk controls output and display of chunks satisfying the restriction imposed by \code{max.dist}; accepted
+#' accepted values are all", "biggest", "first", and "random"
+#'
+#' @return depending on \code{which.chunk} a \code{logical} ("biggest", "first", and "random") labeling
+#' entries in \code{d} to be retained or a \code{data.frame} ("all") containing retained entries and the chunk number.
+#' @export
+#'
+#' @examples
+#' # test data
+#' set.seed(1)
+#' test <- data.frame(group = sample(letters[1:4], 20, TRUE),
+#'                   pos = runif(20, 0, 100),
+#'                   time = as.POSIXct(runif(20, 0, as.numeric(Sys.time())),
+#'                                     origin = as.POSIXct("1970-01-01 00:00.00 UTC")))
+#'
+#' # indicate firs chunk satisfying the condition set by max.dist
+#' dfilter(test$pos, max.dist = 15, which.chunk = "first")
+#' # show all chunks
+#' dfilter(test$pos, max.dist = 15, which.chunk = "all")
+#' # apply in a grouped tibble
+#' test %>% group_by(group) %>% filter(dfilter(time, max.dist = 1000, which.chunk = "first"))
+#' # please note that in a grouped tibble, you cannot use dfilter inside filter()
+#' test %>% group_by(group) %>% group_modify(~ dfilter(.x[, "pos"], max.dist = 15, which.chunk = "all"))
 dfilter <- function(d, max.dist = Inf,
                     temporal.unit = c("day", "second", "minute", "week", "year"),
                     which.chunk = "all") {
