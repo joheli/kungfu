@@ -14,6 +14,7 @@ Presently, the package contains the following functions:
   - `postgresql_uploader`: helps with the uploading of tables to a PostgreSQL database
   - `rbinder`: convenience function for importing and joining of multiple csv-like files that have identical headers
   - `seamless`: attempts to convert a table of intervals into a "seamless" succession of intervals
+  - `dfilter`: distance filter - filters a vector of type *numeric*, *integer*, *Date*, or *POSIXt*, only allowing entries up to a given maximal distance.
   
 ## Help
 
