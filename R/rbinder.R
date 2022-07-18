@@ -22,6 +22,14 @@
 #' #
 #' # To join them, run:
 #' data_combined <- rbinder("^data", read.csv, path = system.file("extdata", package = "kungfu"), unique.field.name = "id")
+#' #
+#' # # You can also create your own custom "dirty reader" and supply that to "rbinder"
+#' # # (Please see "?df_pattern_subset" for information on that function)
+#' # my_dirty_excel_reader <- function(path) {
+#' #    read_xlsx(path) %>%
+#' #    df_pattern_subset("[3,7,9][0-9]{9}", ignore_columns = TRUE) %>%
+#' #    select(Start = `Start XYZ`, Stop = `Stop ABC`)
+#' # }
 #' @export
 rbinder <- function(file.pattern,
                           readf = read.csv2,

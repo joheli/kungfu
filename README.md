@@ -15,6 +15,7 @@ Presently, the package contains the following functions:
   - `rbinder`: convenience function for importing and joining of multiple csv-like files that have identical headers
   - `seamless`: attempts to convert a table of intervals into a "seamless" succession of intervals
   - `dfilter`: distance filter - filters a vector of type *numeric*, *integer*, *Date*, or *POSIXt*, only allowing entries up to a given maximal distance.
+  - `df_pattern_subset`: subsets a `data.frame` given two regex patterns which identify the upper left and lower right corner of the new `data.frame`.
   
 ## Help
 
