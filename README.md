@@ -5,7 +5,7 @@ This R-package contains functions that I use for the cleaning and transforming o
 
 ## Install
 
-Please install package [devtools](https://cran.r-project.org/web/packages/devtools/index.html). After successful installation type `devtools::install_github("joheli/kungfu")`.
+Please install package [devtools](https://cran.r-project.org/web/packages/devtools/index.html). After successful installation type `devtools::install_github("joheli/kungfu")`. Alternatively, download the most recent tagged compressed package from [tags](https://github.com/joheli/kungfu/tags) and install from the R CLI by typing `install.packages(vX.X.X.tar.gz, repos = NULL, type ="source")` (where X.X.X is to be replaced by the version).
 
 ## Contents
 
