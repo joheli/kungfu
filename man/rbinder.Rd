@@ -35,11 +35,3 @@ a united \code{data.frame} with unique entries not duplicated despite possible m
 \description{
 Batch read and unite multiple data files into a single \code{data.frame}.
 }
-\examples{
-# Folder 'extdata' (system.file("extdata", package = "kungfu") contains three csv-files:
-#> dir(system.file("extdata", package = "kungfu"))
-#[1] "data01.csv" "data02.csv" "data03.csv"
-#
-# To join them, run:
-data_combined <- rbinder("^data", read.csv, path = system.file("extdata", package = "kungfu"), unique.field.name = "id")
-}
