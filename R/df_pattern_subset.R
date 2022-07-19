@@ -63,6 +63,8 @@ df_pattern_locate <- function(d, pattern, strategy = c("ul", "lr")) {
 #'
 #' @return \code{df_pattern_subset} returns a new \code{data.frame} extending from the upper left to the
 #' lower right corner previously located (using \code{pattern_ul} and \code{pattern_lr}, respectively).
+#' @seealso [rbinder()] for combining multiple csv-like files with identical headers; \code{df_pattern_subset} can be used to create
+#' custom readers for \code{rbinder}.
 #' @export
 #'
 #' @examples

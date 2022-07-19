@@ -80,3 +80,7 @@ the upper left and lower right corner of the subset.
 #
 # write.xlsx(fnts, "../inst/extdata/fnts.xlsx", overwrite = TRUE)
 }
+\seealso{
+\code{\link[=rbinder]{rbinder()}} for combining multiple csv-like files with identical headers; \code{df_pattern_subset} can be used to create
+custom readers for \code{rbinder}.
+}

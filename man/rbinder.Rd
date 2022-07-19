@@ -35,3 +35,23 @@ a united \code{data.frame} with unique entries not duplicated despite possible m
 \description{
 Batch read and unite multiple data files into a single \code{data.frame}.
 }
+\examples{
+# - Folder 'extdata' (system.file("extdata", package = "kungfu") contains three csv-files:
+#> dir(system.file("extdata", package = "kungfu"), pattern = "csv")
+#[1] "data01.csv" "data02.csv" "data03.csv"
+#
+# - To join them, run:
+data_combined <- rbinder("^data", read.csv, path = system.file("extdata", package = "kungfu"), unique.field.name = "id")
+#
+# - You can also create your own custom "dirty reader" and supply that to "rbinder"
+# - (Please see "?df_pattern_subset" for information regarding that function)
+# - e.g.:
+# my_dirty_excel_reader <- function(path) {
+#    read_xlsx(path) \%>\%
+#    df_pattern_subset("^mySpecial.*Pattern$", ignore_columns = TRUE) \%>\%
+#    select(id, size, -timestamp, etc, anothercolumn)
+# }
+}
+\seealso{
+\code{\link[=df_pattern_subset]{df_pattern_subset()}} for subsetting a \code{data.frame}, useful for creating custom readers, see examples
+}

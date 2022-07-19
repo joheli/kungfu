@@ -15,22 +15,25 @@
 #' @import utils
 #'
 #' @return a united `data.frame` with unique entries not duplicated despite possible multiple occurrence in files
+#' @seealso [df_pattern_subset()] for subsetting a \code{data.frame}, useful for creating custom readers, see examples
 #' @examples
-#' # Folder 'extdata' (system.file("extdata", package = "kungfu") contains three csv-files:
-#' #> dir(system.file("extdata", package = "kungfu"))
+#' # - Folder 'extdata' (system.file("extdata", package = "kungfu") contains three csv-files:
+#' #> dir(system.file("extdata", package = "kungfu"), pattern = "csv")
 #' #[1] "data01.csv" "data02.csv" "data03.csv"
 #' #
-#' # To join them, run:
+#' # - To join them, run:
 #' data_combined <- rbinder("^data", read.csv, path = system.file("extdata", package = "kungfu"), unique.field.name = "id")
 #' #
-#' # # You can also create your own custom "dirty reader" and supply that to "rbinder"
-#' # # (Please see "?df_pattern_subset" for information on that function)
-#' # my_dirty_excel_reader <- function(path, ...) {
+#' # - You can also create your own custom "dirty reader" and supply that to "rbinder"
+#' # - (Please see "?df_pattern_subset" for information regarding that function)
+#' # - e.g.:
+#' # my_dirty_excel_reader <- function(path) {
 #' #    read_xlsx(path) %>%
-#' #    df_pattern_subset("[3,7,9][0-9]{9}", ignore_columns = TRUE) %>%
-#' #    select(...)
+#' #    df_pattern_subset("^mySpecial.*Pattern$", ignore_columns = TRUE) %>%
+#' #    select(id, size, -timestamp, etc, anothercolumn)
 #' # }
 #' @export
+#'
 rbinder <- function(file.pattern,
                           readf = read.csv2,
                           path = ".",
