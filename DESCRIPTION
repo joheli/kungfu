@@ -1,6 +1,6 @@
 Package: kungfu
 Title: kungfu - kicks stubborn data into shape
-Version: 0.0.13
+Version: 0.1.0
 Authors@R: 
     person(given = "Johannes",
            family = "Elias",
@@ -22,6 +22,7 @@ Imports: DBI (>= 1.1.1),
          openxlsx (>= 4.2.4),
          parallel (>= 4.0.4),
          pbapply (>= 1.4-3),
+         purrr (>= 0.3.4),
          readxl (>= 1.3.1),
          rlang (>= 0.4.10),
          RPostgreSQL (>= 0.6-2),

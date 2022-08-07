@@ -1,3 +1,19 @@
+# # create test data
+# set.seed(1)
+# .dts <- seq.Date(as.Date("2002-01-01"), as.Date("2002-12-31"), 1) # sequence of dates
+# fakedata <- function(start, rows) {
+#   data.frame(id = start:(start + rows - 1), group = sample(letters[1:4], rows, replace = TRUE),
+#              date = sample(.dts, rows, replace = TRUE),
+#              car = sample(rownames(mtcars), rows, replace = TRUE))
+# }
+# test1 <- fakedata(1,10)
+# test2 <- fakedata(7, 12)
+# test3 <- fakedata(16, 10)
+#
+# write.csv(test1, "inst/extdata/test1.csv", row.names = FALSE)
+# write.csv(test2, "inst/extdata/test2.csv", row.names = FALSE)
+# write.csv(test3, "inst/extdata/test3.csv", row.names = FALSE)
+
 #' rbinder
 #'
 #' Batch read and unite multiple data files into a single `data.frame`.
@@ -9,7 +25,7 @@
 #' (defaults to ".").
 #' @param unique.field.name character; column names designating unique entries that are not to be duplicated
 #' after uniting of files; use to avoid duplicates introduced by reading in of files with same content.
-#' @param result character; only used for debugging (in that case, pass "debug").
+#' @param result character; increases verbosity ("summary") or additionally persists intermediary results to file `debug.rds` ("debug").
 #' @param ... arguments passed to function `readf`.
 #'
 #' @import utils
@@ -38,17 +54,28 @@ rbinder <- function(file.pattern,
                           readf = read.csv2,
                           path = ".",
                           unique.field.name,
-                          result = c("default",
-                                     "debug"),
+                          result = c("default", "summary", "debug"),
                           ...) {
   result = match.arg(result)
+
+  # step1: a list of data.frames, read in using 'readf' on files matching 'file.pattern'
   step1 <- batchread(file.pattern,
                            readf,
                            path,
                            ...)
+
+  # step2: a combined data.frame created from the list supplied through step1
   step2 <- rbinder2(step1, unique.field.name)
-  rtn <- step2
-  if (result == "default") rtn <- step2[[1]]
+  rtn <- step2$rbound
+
+  # add info depending on 'result'
+  if (result != "default") {
+    cat(step2$summary_sentence)
+    print(step2$summary, row.names = FALSE)
+
+    if (result == "debug") saveRDS(step2, file = "debug.rds")
+  }
+
   return(rtn)
 }
 
@@ -58,20 +85,66 @@ batchread <- function (file.pattern,
                              path = ".",
                              ...) {
   # file.names: a vector of matching file names
-  file.names <- dir(path, file.pattern)
+  file.names <- dir(path = path, pattern = file.pattern, full.names = TRUE)
   # Stop if no matching files found
   if (length(file.names) < 1) stop(paste0("No files matching the pattern '", file.pattern, "' found!"))
-  # create list to save data.frames
-  df.list <- list()
-  # loop, read in files to df.list
-  for (i in 1:length(file.names)) {
-    f.name <- file.names[i]
-    f.path <- f.name
-    if (path != ".") f.path <- fs::path(path, f.name)
-    d <- readf(f.path, ...)
-    df.list[[f.name]] <- d
-  }
+  # create list of data.frames
+  df.list <- purrr::map(file.names, readf, ...)
+  names(df.list) <- fs::path_file(file.names)
+  # return
   return(df.list)
+}
+
+#' cleaner
+#'
+#' This function "cleans" data.frames, i.e. removes duplicate entries.
+#'
+#' @param d a `data.frame`
+#' @param ufn character, contains column names identifying unique entries
+#' @param orderAlsoBy optional character, contains column name(s) that `d` is ordered by prior to cleaning
+#'
+#' @return a cleaned (i.e. deduplicated) `data.frame`
+#' @export
+#'
+#' @examples
+cleaner <- function(d, ufn, orderAlsoBy = character()) {
+  ufn_ <- c(ufn, orderAlsoBy)
+  d %>% arrange(across(all_of(ufn_))) %>%
+    group_by(across(all_of(ufn))) %>%
+    slice(n=1)
+}
+
+key <- function(d, ufn = NULL) {
+  if (is.null(ufn)) ufn = names(d)
+  d %>% as.data.frame() %>% # a tibble has to be converted to a data.frame!
+    select(all_of(ufn)) %>%
+    mutate(across(everything(), as.character)) %>%
+    rowwise() %>% mutate(k = paste(c_across(), collapse = "")) %>%
+    ungroup() %>% pull(k)
+}
+
+cleaned <- function(before, after) {
+  k.before <- key(before)
+  k.after <- key(after)
+  i <- !(k.before %in% k.after) | duplicated(k.before) # warning: assumption!
+  # it is assumed, that 'after' was cleaned with cleaner(), i.e. duplicates were removed!
+  # this assumption (i.e. that duplicates were removed) does not hold for other functions
+  # this function is not agnostic of the function performing the cleaning
+  before[i, ]
+}
+
+excluded <- function(d, reference, ufn) {
+  k1 <- key(d, ufn = ufn)
+  k2 <- key(reference, ufn = ufn)
+  is <- intersect(k1, k2)
+  i <- (k1 %in% is) | duplicated(k1) # warning: assumption!
+  # it is assumed, that duplicates were in fact excluded; see comment in function cleaned().
+  d[i, ]
+}
+
+combine_unique <- function(a, b, ufn) {
+  i <- !(key(a, ufn = ufn) %in% key(b, ufn = ufn))
+  rbind(a[i, ], b)
 }
 
 # Helper function to join list of data.frames into a single data.frame
@@ -80,47 +153,52 @@ rbinder2 <- function(df.list,
   # stop if df.list is empty
   if (length(df.list) < 1)
     stop(paste0(deparse(substitute(df.list)), " appears to be empty!"))
-  # stop if df.list contents are not named
-  if (length(names(df.list)) < 1)
-    stop(paste0("Contents of ", deparse(substitute(df.list)), "are not named!"))
-  # stop if names of df.list contains NA
-  if (any(is.na(names(df.list))))
-    stop(paste0(deparse(substitute(df.list)), " has unnamed entries!"))
 
-  # d is the dataframe returned at the end
-  d <- data.frame()
+  # first, clean each data.frame, i.e. exclude duplicates
+  df.list.clean <- purrr::map(df.list, cleaner, ufn = unique.field.name)
+  len.dlc <- length(df.list.clean)
+  # for transparency, save cleaned out rows
+  df.list.cleaned <- purrr::map2(df.list, df.list.clean, cleaned)
 
-  # nrows holds the number of rows contained within each assessed data.frame
-  nrows <- numeric()
+  # second, reduce df.clean.list to single data.frame, successively excluding already present entries
+  df.combined <- purrr::reduce(df.list.clean, combine_unique, ufn = unique.field.name)
 
-  # uniquerows lists the number of unique rows contributed by each assessed data.frame
-  uniquerows  <- numeric()
+  # assemble a list of excluded entries
+  df.excluded <- purrr::map2(df.list.clean[2:len.dlc], df.list.clean[1:(len.dlc - 1)],
+                             excluded, ufn = unique.field.name)
 
-  # function for temporary key generation
-  tk <- function(df, u)
-    return(eval(parse(text = paste0("with(df, paste(", paste(u, collapse = ", "), "))"))))
+  # summary data
+  names_df0 <- names(df.list)
+  names_df <- names_df0
+  if (is.null(names_df0)) names_df <- 1:length(df.list)
+  number_of_rows_pre <- unlist(purrr::map(df.list, nrow))
+  sum_rows_pre <- sum(number_of_rows_pre)
+  number_of_rows_cleaned <- unlist(purrr::map(df.list.cleaned, nrow))
+  sum_rows_cleaned <- sum(number_of_rows_cleaned)
+  number_of_rows_excluded <- unlist(purrr::map(df.excluded, nrow))
+  sum_rows_excluded <- sum(number_of_rows_excluded)
+  sum_filtered <- sum_rows_cleaned + sum_rows_excluded
+  number_of_rows_comb <- nrow(df.combined)
+  smmr_df <- data.frame(names_df,
+                        number_of_rows_pre,
+                        number_of_rows_cleaned,
+                        c(0, number_of_rows_excluded))
+  summary_sentence <- paste0("\nS u m m a r y\n\n", sum_rows_pre, " rows from ", length(df.list), " files",
+                             " have been read in. The combined data.frame retained ", number_of_rows_comb, " rows.\n\nIn total, ",
+                             sum_filtered, " rows of the original tables have been denied inclusion into the combined data.frame. ",
+                             "\nOf those, ", sum_rows_cleaned, " rows have been 'cleaned', i.e. filtered out due to ",
+                             "being duplicates of entries within the same file, and ", sum_rows_excluded,
+                             " rows have been 'excluded', i.e. filtered out due to being duplicates of ",
+                             "entries previously added from preceding files.\nPlease see the summary table ",
+                             "below for a more complete breakdown:\n\n")
+  names(smmr_df) <- c("table name", "initial number of rows", "rows cleaned", "rows excluded")
 
-  # loop through the list of data.frames
-  for (df.name in names(df.list)) {
-    df.current <- df.list[[df.name]]      # current data.frame in loop
-    nrows  <- c(nrows, nrow(df.current))  # how much rows does the current data.frame have?
-    if (nrow(d) == 0) {
-      # if d is empty (at start), set d to df.current
-      d <- df.current
-      uniquerows <- nrows
-    } else {
-      # if d is not empty (after first iteration) reduce df.current to rows that are unique
-      df.current <- df.current[!(tk(df.current, unique.field.name) %in% tk(d, unique.field.name)), ]
-      uniquerows <- c(uniquerows, nrow(df.current))
-      d <- rbind(d, df.current)
-    }
-  }
-  report <- data.frame(`file name` = names(df.list), `number of rows` = nrows, `unique rows` = uniquerows)
-  report  <- rbind(report,
-                   data.frame(
-                     `file name` = "merged data.frame",
-                     `number of rows` = nrow(d),
-                     `unique rows` = length(unique(d[, unique.field.name]))
-                   ))
-  return(list(`merged data.frame` = d, report = report))
+  #print(smmr_df)
+  # return
+  list(rbound = df.combined,
+       summary = smmr_df,
+       cleaned = df.list.cleaned,
+       excluded = df.excluded,
+       nrow_combined = number_of_rows_comb,
+       summary_sentence = summary_sentence)
 }

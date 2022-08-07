@@ -9,7 +9,7 @@ rbinder(
   readf = read.csv2,
   path = ".",
   unique.field.name,
-  result = c("default", "debug"),
+  result = c("default", "summary", "debug"),
   ...
 )
 }
@@ -25,7 +25,7 @@ rbinder(
 \item{unique.field.name}{character; column names designating unique entries that are not to be duplicated
 after uniting of files; use to avoid duplicates introduced by reading in of files with same content.}
 
-\item{result}{character; only used for debugging (in that case, pass "debug").}
+\item{result}{character; increases verbosity ("summary") or additionally persists intermediary results to file \code{debug.rds} ("debug").}
 
 \item{...}{arguments passed to function \code{readf}.}
 }
