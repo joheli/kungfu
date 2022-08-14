@@ -133,9 +133,16 @@ key <- function(d, ufn = NULL) {
     ungroup() %>% pull(k)
 }
 
+key2 <- function(d, ufn = NULL) {
+  #d <- as.data.frame(d)
+  if (is.null(ufn)) ufn <- names(d)
+  ds <- d[,ufn]
+  trimws(apply(ds, 1, paste, collapse = ""))
+}
+
 cleaned <- function(before, after) {
-  k.before <- key(before)
-  k.after <- key(after)
+  k.before <- key2(before)
+  k.after <- key2(after)
   i <-
     !(k.before %in% k.after) |
     duplicated(k.before) # warning: assumption!
@@ -146,8 +153,8 @@ cleaned <- function(before, after) {
 }
 
 excluded <- function(d, reference, ufn) {
-  k1 <- key(d, ufn = ufn)
-  k2 <- key(reference, ufn = ufn)
+  k1 <- key2(d, ufn = ufn)
+  k2 <- key2(reference, ufn = ufn)
   is <- intersect(k1, k2)
   i <- (k1 %in% is) | duplicated(k1) # warning: assumption!
   # it is assumed, that duplicates were in fact excluded; see comment in function cleaned().
@@ -155,7 +162,7 @@ excluded <- function(d, reference, ufn) {
 }
 
 combine_unique <- function(a, b, ufn) {
-  i <- !(key(a, ufn = ufn) %in% key(b, ufn = ufn))
+  i <- !(key2(a, ufn = ufn) %in% key2(b, ufn = ufn))
   rbind(a[i,], b)
 }
 
