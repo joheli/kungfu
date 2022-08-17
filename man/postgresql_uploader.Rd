@@ -2,24 +2,38 @@
 % Please edit documentation in R/postgresql_uploader.R
 \name{postgresql_uploader}
 \alias{postgresql_uploader}
+\alias{killConnections}
 \title{postgresql_uploader}
 \usage{
 postgresql_uploader(con, r_df, pg_table, unique.field.names, update = TRUE)
+
+killConnections()
 }
 \arguments{
-\item{con}{a \code{DBI::DBIConnection} object.}
+\item{con}{a \code{DBI::DBIConnection} object created with \code{\link[RPostgreSQL:dbConnect]{RPostgreSQL::dbConnect()}}.}
 
 \item{r_df}{data.frame to be uploaded; must contain identical column names to \code{pg_table}.}
 
-\item{pg_table}{character specifying PostgreSQL table name.}
+\item{pg_table}{character specifying PostgreSQL table name; the referred table on the
+PostgreSQL backend must have the same column names as \code{r_df}}
 
-\item{unique.field.names}{character specifying unique column names.}
+\item{unique.field.names}{character specifying unique column names; please note, that column names
+of \code{r_df} and \code{pg_table} must be identical.}
 
 \item{update}{logical specifying whether to update existing entries as defined by \code{unique.field.names}.}
 }
 \value{
-\code{list} with information about effected inserts and updates
+\code{postgresql_uploader} returns a \code{list} with information about effected inserts and updates
+
+\code{killConnections} has no return; its side effect is described above
 }
 \description{
-A convenience function to upload contents of a \code{data.frame} object into a PostgreSQL table.
+\code{postgresql_uploader} is a convenience function to upload contents of a \code{data.frame}
+object into an exsisting PostgreSQL table. The table must first be created on the PostgreSQL
+backend (via "\verb{CREATE TABLE ...}") before \code{postgresql_uploader} is used.
+
+\code{killConnections} disconnects all PostgreSQL connections.
+}
+\seealso{
+\code{\link[RPostgreSQL:dbConnect]{RPostgreSQL::dbConnect()}}
 }

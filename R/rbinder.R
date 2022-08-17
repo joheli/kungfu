@@ -120,7 +120,8 @@ cleaner <- function(d, ufn, orderAlsoBy = character()) {
   ufn_ <- c(ufn, orderAlsoBy)
   d %>% arrange(across(all_of(ufn_))) %>%
     group_by(across(all_of(ufn))) %>%
-    slice(n = 1)
+    slice(n = 1) %>%
+    as.data.frame
 }
 
 key <- function(d, ufn = NULL) {
@@ -190,7 +191,7 @@ rbinder2 <- function(df.list,
 
   # second, reduce df.clean.list to single data.frame, successively excluding already present entries
   df.combined <-
-    purrr::reduce(df.list.clean, combine_unique, ufn = unique.field.name) %>% ungroup # I don't understand why grouping is introduced in the first place - irritating - now removed
+    purrr::reduce(df.list.clean, combine_unique, ufn = unique.field.name) %>% as.data.frame # I don't understand why grouping is introduced in the first place - irritating - now removed
 
   # assemble a list of excluded entries
   if (verbose)

@@ -1,17 +1,24 @@
-#' postgresql_uploader
+#' @name postgresql_uploader
+#' @title postgresql_uploader
 #'
-#' A convenience function to upload contents of a `data.frame` object into a PostgreSQL table.
+#' @description `postgresql_uploader` is a convenience function to upload contents of a `data.frame`
+#' object into an exsisting PostgreSQL table. The table must first be created on the PostgreSQL
+#' backend (via "`CREATE TABLE ...`") before `postgresql_uploader` is used.
 #'
-#' @param con a `DBI::DBIConnection` object.
+#' @param con a `DBI::DBIConnection` object created with [RPostgreSQL::dbConnect()].
 #' @param r_df data.frame to be uploaded; must contain identical column names to `pg_table`.
-#' @param pg_table character specifying PostgreSQL table name.
-#' @param unique.field.names character specifying unique column names.
+#' @param pg_table character specifying PostgreSQL table name; the referred table on the
+#' PostgreSQL backend must have the same column names as `r_df`
+#' @param unique.field.names character specifying unique column names; please note, that column names
+#' of `r_df` and `pg_table` must be identical.
 #' @param update logical specifying whether to update existing entries as defined by `unique.field.names`.
 #'
-#' @return `list` with information about effected inserts and updates
+#' @return `postgresql_uploader` returns a `list` with information about effected inserts and updates
 #'
 #' @import DBI
 #' @import RPostgreSQL
+#'
+#' @seealso [RPostgreSQL::dbConnect()]
 #'
 #' @export
 postgresql_uploader <- function(con, r_df, pg_table, unique.field.names, update = TRUE) {
@@ -77,6 +84,10 @@ postgresql_uploader <- function(con, r_df, pg_table, unique.field.names, update 
     status2 <- dbSendQuery(con, update_sql)
     info2 <- dbGetInfo(status2)
 
+    # add prefix to names within info and info2 so they remain unique
+    names(info) <- paste("upload:", names(info))
+    names(info2) <- paste("update:", names(info2))
+
     # merge info and info2
     info <- c(info, info2)
   }
@@ -88,6 +99,14 @@ postgresql_uploader <- function(con, r_df, pg_table, unique.field.names, update 
   info
 }
 
+#' @rdname postgresql_uploader
+#'
+#' @description `killConnections` disconnects all PostgreSQL connections.
+#'
+#' @return `killConnections` has no return; its side effect is described above
+#' @export
+#'
+#' @examples
 killConnections <- function() {
   for(con in dbListConnections(dbDriver("PostgreSQL"))){
     dbDisconnect(con)
