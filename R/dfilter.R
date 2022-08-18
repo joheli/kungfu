@@ -1,5 +1,5 @@
-library(tidyr)
-library(dplyr)
+#library(tidyr)
+#library(dplyr)
 
 # Test df
 set.seed(1)
@@ -55,14 +55,14 @@ chunks <- function(x, max.distance = NULL,
 
   # Generate distance matrix
   ds <- NULL # initialize ds (variable containing dist result)
-  try(ds <- dist(x), silent = TRUE)
+  try(ds <- stats::dist(x), silent = TRUE)
   if (is.null(ds)) stop("Generation of distance matrix by function 'dist' failed.")
 
   # Apply hierarchical clustering: hclust
-  tr <- hclust(ds)
+  tr <- stats::hclust(ds)
 
   # Create groups based on max.distance
-  cuts <- cutree(tree = tr, h = max.distance)
+  cuts <- stats::cutree(tree = tr, h = max.distance)
 
   # Single chunk ("first", "random", "biggest") options
   tc <- table(cuts)
@@ -115,6 +115,9 @@ chunks <- function(x, max.distance = NULL,
 #'
 #' @return depending on \code{which.chunk} a \code{logical} ("biggest", "first", and "random") labeling
 #' entries in \code{d} to be retained or a \code{data.frame} ("all") containing retained entries and the chunk number.
+#' @importFrom stats dist
+#' @importFrom stats hclust
+#' @importFrom stats cutree
 #' @export
 #'
 #' @examples

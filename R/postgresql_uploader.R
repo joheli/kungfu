@@ -5,7 +5,7 @@
 #' object into an exsisting PostgreSQL table. The table must first be created on the PostgreSQL
 #' backend (via "`CREATE TABLE ...`") before `postgresql_uploader` is used.
 #'
-#' @param con a `DBI::DBIConnection` object created with [RPostgreSQL::dbConnect()].
+#' @param con a `DBI::DBIConnection` object created with \link[RPostgreSQL]{dbConnect}.
 #' @param r_df data.frame to be uploaded; must contain identical column names to `pg_table`.
 #' @param pg_table character specifying PostgreSQL table name; the referred table on the
 #' PostgreSQL backend must have the same column names as `r_df`
@@ -18,7 +18,7 @@
 #' @import DBI
 #' @import RPostgreSQL
 #'
-#' @seealso [RPostgreSQL::dbConnect()]
+#' @seealso \link[RPostgreSQL]{dbConnect}
 #'
 #' @export
 postgresql_uploader <- function(con, r_df, pg_table, unique.field.names, update = TRUE) {
@@ -105,8 +105,6 @@ postgresql_uploader <- function(con, r_df, pg_table, unique.field.names, update 
 #'
 #' @return `killConnections` has no return; its side effect is described above
 #' @export
-#'
-#' @examples
 killConnections <- function() {
   for(con in dbListConnections(dbDriver("PostgreSQL"))){
     dbDisconnect(con)

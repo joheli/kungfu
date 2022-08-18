@@ -10,7 +10,7 @@ postgresql_uploader(con, r_df, pg_table, unique.field.names, update = TRUE)
 killConnections()
 }
 \arguments{
-\item{con}{a \code{DBI::DBIConnection} object created with \code{\link[RPostgreSQL:dbConnect]{RPostgreSQL::dbConnect()}}.}
+\item{con}{a \code{DBI::DBIConnection} object created with \link[RPostgreSQL]{dbConnect}.}
 
 \item{r_df}{data.frame to be uploaded; must contain identical column names to \code{pg_table}.}
 
@@ -35,5 +35,5 @@ backend (via "\verb{CREATE TABLE ...}") before \code{postgresql_uploader} is use
 \code{killConnections} disconnects all PostgreSQL connections.
 }
 \seealso{
-\code{\link[RPostgreSQL:dbConnect]{RPostgreSQL::dbConnect()}}
+\link[RPostgreSQL]{dbConnect}
 }

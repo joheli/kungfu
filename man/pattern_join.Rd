@@ -42,15 +42,8 @@ The \emph{second} \code{data.frame} maps its rows to above mentioned \emph{dirty
 one of its own columns.
 }
 \examples{
-# set seed to make it reproducible
-set.seed(1)
-# extract twenty rows of nycflights13::planes
-airplanes <- nycflights13::planes \%>\% slice(sample(1:nrow(nycflights13::planes), 20))
-# model_type is really just a stupid pattern map, please don't pay attention to the content.
-model_type <- tibble(pattern = c("PA-32", "EMB-145", "7[2-8]7", "A320"),
-                     model_type = c("Piper 32", "Embraer 145", "Boeing 7X7", "Airbus 320"))
 # pattern_join 'airplanes' with 'model_type' by columns 'model' and 'pattern'
-airplanes_model_type <- pattern_join(airplanes, model_type, c("model" = "pattern"))
+airplanes_model_type <- pattern_join(airplanes, model_type, c("model" = "pattern"), multicore = FALSE)
 }
 \seealso{
 \code{pattern_join} is similar to \link[fuzzyjoin]{regex_join}

@@ -18,6 +18,7 @@
 #' @import lubridate
 #' @import fuzzyjoin
 #' @importFrom rlang :=
+#' @importFrom tidyr unite
 #'
 #' @rdname seamless
 #'

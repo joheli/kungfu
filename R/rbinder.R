@@ -114,8 +114,6 @@ batchread <- function (file.pattern,
 #'
 #' @return a cleaned (i.e. deduplicated) `data.frame`
 #' @export
-#'
-#' @examples
 cleaner <- function(d, ufn, orderAlsoBy = character()) {
   ufn_ <- c(ufn, orderAlsoBy)
   d %>% arrange(across(all_of(ufn_))) %>%
@@ -124,7 +122,10 @@ cleaner <- function(d, ufn, orderAlsoBy = character()) {
     as.data.frame
 }
 
+
+# key has been superseded by key2, as latter is at least ten times quicker
 key <- function(d, ufn = NULL) {
+  k <- NULL
   if (is.null(ufn))
     ufn = names(d)
   d %>% as.data.frame() %>% # a tibble has to be converted to a data.frame!
@@ -134,13 +135,20 @@ key <- function(d, ufn = NULL) {
     ungroup() %>% pull(k)
 }
 
+# accepts a data.frame and a character vector
+# returns a character vector
 key2 <- function(d, ufn = NULL) {
-  #d <- as.data.frame(d)
+  #d <- as.data.frame(d) # this conversion does not seem to be necessary
   if (is.null(ufn)) ufn <- names(d)
-  ds <- d[,ufn]
-  trimws(apply(ds, 1, paste, collapse = ""))
+  ds <- d[, ufn]
+  res <- ds # if ufn is a vector of length 1, e.g. "id", then ds is the result (res)
+  # if, however, ufn refers to multiple colums, entries of those columns have to be collapsed
+  if (length(ufn) > 1) res <- trimws(apply(ds, 1, paste, collapse = ""))
+  res
 }
 
+# accepts two data.frames
+# returns a data.frame
 cleaned <- function(before, after) {
   k.before <- key2(before)
   k.after <- key2(after)
@@ -153,6 +161,8 @@ cleaned <- function(before, after) {
   before[i,]
 }
 
+# accepts two data.frames and a character vector
+# returns a data.frame
 excluded <- function(d, reference, ufn) {
   k1 <- key2(d, ufn = ufn)
   k2 <- key2(reference, ufn = ufn)
@@ -162,12 +172,17 @@ excluded <- function(d, reference, ufn) {
   d[i,]
 }
 
+# combines unique entries
+# accepts two data.frames and a character vector
+# returns a data.frame
 combine_unique <- function(a, b, ufn) {
   i <- !(key2(a, ufn = ufn) %in% key2(b, ufn = ufn))
   rbind(a[i,], b)
 }
 
 # Helper function to join list of data.frames into a single data.frame
+# accepts a list of data.frames, a character vector, and a logical
+# returns a list containing a combined data.frame and other data
 rbinder2 <- function(df.list,
                      unique.field.name,
                      verbose = FALSE) {
@@ -193,8 +208,8 @@ rbinder2 <- function(df.list,
   df.combined <-
     purrr::reduce(df.list.clean, combine_unique, ufn = unique.field.name) %>% as.data.frame # I don't understand why grouping is introduced in the first place - irritating - now removed
 
-  # assemble a list of excluded entries
-  if (verbose)
+  # assemble a list of excluded entries, if requested *and* more than one data.frame in list
+  if (verbose & length(df.list) > 1)
     df.excluded <-
     purrr::map2(df.list.clean[2:len.dlc], df.list.clean[1:(len.dlc - 1)],
                 excluded, ufn = unique.field.name)
@@ -210,10 +225,19 @@ rbinder2 <- function(df.list,
     number_of_rows_cleaned <-
       unlist(purrr::map(df.list.cleaned, nrow))
     sum_rows_cleaned <- sum(number_of_rows_cleaned)
-    number_of_rows_excluded <- unlist(purrr::map(df.excluded, nrow))
-    sum_rows_excluded <- sum(number_of_rows_excluded)
-    sum_filtered <- sum_rows_cleaned + sum_rows_excluded
+
+    # initialize variables depending on length of df.list > 1
+    number_of_rows_excluded <- numeric()
+    sum_rows_excluded <- 0
+    sum_filtered <- sum_rows_cleaned
     number_of_rows_comb <- nrow(df.combined)
+
+    if (length(df.list) > 1) {
+      number_of_rows_excluded <- unlist(purrr::map(df.excluded, nrow))
+      sum_rows_excluded <- sum(number_of_rows_excluded)
+      sum_filtered <- sum_rows_cleaned + sum_rows_excluded
+    }
+
     smmr_df <- data.frame(
       names_df,
       number_of_rows_pre,
@@ -224,20 +248,20 @@ rbinder2 <- function(df.list,
       paste0(
         "\nS u m m a r y\n\n",
         sum_rows_pre,
-        " rows from ",
+        " row", if_else(sum_rows_pre == 1, "", "s"), " from ",
         length(df.list),
-        " files",
+        " file", if_else(length(df.list) == 1, "", "s"),
         " have been read in. The combined data.frame retained ",
         number_of_rows_comb,
-        " rows.\n\nIn total, ",
+        " row", if_else(number_of_rows_comb == 1, "", "s"), ".\n\nIn total, ",
         sum_filtered,
-        " rows of the original tables have been denied inclusion into the combined data.frame. ",
+        " row", if_else(sum_filtered == 1, "", "s"), " of the original tables have been denied inclusion into the combined data.frame. ",
         "\nOf those, ",
         sum_rows_cleaned,
-        " rows have been 'cleaned', i.e. filtered out due to ",
+        " row", if_else(sum_rows_cleaned == 1, "", "s"), " have been 'cleaned', i.e. filtered out due to ",
         "being duplicates of entries within the same file, and ",
         sum_rows_excluded,
-        " rows have been 'excluded', i.e. filtered out due to being duplicates of ",
+        " row", if_else(sum_rows_excluded == 1, "", "s"), " have been 'excluded', i.e. filtered out due to being duplicates of ",
         "entries previously added from preceding files.\nPlease see the summary table ",
         "below for a more complete breakdown:\n\n"
       )
