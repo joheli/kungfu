@@ -4,18 +4,26 @@
 \alias{cleaner}
 \title{cleaner}
 \usage{
-cleaner(d, ufn, orderAlsoBy = character())
+cleaner(d, ufn, orderAlsoBy = character(), decr = FALSE)
 }
 \arguments{
 \item{d}{a \code{data.frame}}
 
-\item{ufn}{character, contains column names identifying unique entries}
+\item{ufn}{character, contains column names identifying unique entries (\code{ufn} is an abbreviation of "unique field names")}
 
-\item{orderAlsoBy}{optional character, contains column name(s) that \code{d} is ordered by prior to cleaning}
+\item{orderAlsoBy}{optional character, specifies column name that \code{d} is ordered by prior to cleaning}
+
+\item{decr}{logical, specifying if \code{orderAlsoBy} is to be sorted in a decreasing fashion (defaults to \code{FALSE})}
 }
 \value{
 a cleaned (i.e. deduplicated) \code{data.frame}
 }
 \description{
 This function "cleans" data.frames, i.e. removes duplicate entries.
+}
+\examples{
+# clean heart rate data, only allow first measurement per person and condition
+onlyfirst <- cleaner(heartrate, c("person", "condition"), "timestamp")
+# alternatively, only allow last measurement
+onlylast <- cleaner(heartrate, c("person", "condition"), "timestamp", TRUE)
 }

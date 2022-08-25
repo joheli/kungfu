@@ -65,6 +65,7 @@ seamless <- function(d, begin = begin, end = end) {
   if (ncol(d) < 3) stop("Please supply at least one additional column in addition to 'begin' and 'end'.")
   clnms <- colnames(d) # save order of columns for later use
   clnms_group <- d %>% select(-c({{begin}}, {{end}})) %>% colnames()
+  clnms_begin_end <- d %>% select({{begin}}, {{end}}) %>% colnames()
   start_tp <- pull(d, {{begin}})
   stop_tp <- pull(d, {{end}})
   if (!all((stop_tp - start_tp) > 0)) stop("'begin' has to be smaller than 'end'!")
@@ -87,7 +88,9 @@ seamless <- function(d, begin = begin, end = end) {
 
   # Join 'id' with 'd', prioritizing matches according to shortest duration 'dur'
   d3 <- mutate(id, movement = 1:nrow(id)) %>% # movement is a temporary field
-    interval_left_join(dd, minoverlap = 2) %>% # minoverlap is necessary to avoid matching with contiguous intervals
+    interval_left_join(dd, minoverlap = 2, by = clnms_begin_end) %>%
+    # minoverlap is necessary to avoid matching with contiguous intervals
+    # by is necessary to suppress pesky messages
     group_by(movement) %>%
     slice_min(dur) %>% # prioritizing according to 'dur'
     ungroup() %>% # necessary to remove temporary field 'movement'
@@ -108,3 +111,7 @@ seamless <- function(d, begin = begin, end = end) {
   # return
   d4
 }
+
+# testjoin <- function(by = NULL) {
+#   band_members %>% left_join(band_instruments, by = c({{by}}))
+# }

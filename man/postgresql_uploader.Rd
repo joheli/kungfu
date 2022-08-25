@@ -5,7 +5,13 @@
 \alias{killConnections}
 \title{postgresql_uploader}
 \usage{
-postgresql_uploader(con, r_df, pg_table, unique.field.names, update = TRUE)
+postgresql_uploader(
+  con,
+  r_df,
+  pg_table = deparse(substitute(r_df)),
+  unique.field.names,
+  update = TRUE
+)
 
 killConnections()
 }
@@ -14,13 +20,15 @@ killConnections()
 
 \item{r_df}{data.frame to be uploaded; must contain identical column names to \code{pg_table}.}
 
-\item{pg_table}{character specifying PostgreSQL table name; the referred table on the
-PostgreSQL backend must have the same column names as \code{r_df}}
+\item{pg_table}{character specifying existing PostgreSQL table name; the referred table on the
+PostgreSQL backend must have the same column names as \code{r_df}; \code{pg_table} defaults to name of object passed
+as \code{r_df} (i.e. \code{deparse(substitute(r_df))}).}
 
 \item{unique.field.names}{character specifying unique column names; please note, that column names
-of \code{r_df} and \code{pg_table} must be identical.}
+of \code{r_df} and \code{pg_table} must be identical!}
 
-\item{update}{logical specifying whether to update existing entries as defined by \code{unique.field.names}.}
+\item{update}{logical, specifying whether to update existing entries as defined by \code{unique.field.names};
+defaults to \code{TRUE}.}
 }
 \value{
 \code{postgresql_uploader} returns a \code{list} with information about effected inserts and updates

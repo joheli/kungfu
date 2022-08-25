@@ -18,7 +18,7 @@ model_type
 A \code{tibble} representing a pattern map for the demonstration of function \code{pattern_join}
 }
 \note{
-It is created thus:\preformatted{model_type <- tibble(pattern = c("PA-32", "EMB-145", "7[2-8]7", "A320"),
+created thus:\preformatted{model_type <- tibble(pattern = c("PA-32", "EMB-145", "7[2-8]7", "A320"),
                      model_type = c("Piper 32", "Embraer 145", "Boeing 7X7", "Airbus 320"))
 }
 }

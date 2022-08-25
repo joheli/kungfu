@@ -4,7 +4,7 @@
 #'
 #' @docType data
 #'
-#' @note It is created thus:
+#' @note created thus:
 #'
 #' ```
 #' # set seed
@@ -33,7 +33,7 @@
 #'
 #' @docType data
 #'
-#' @note It is created thus:
+#' @note created thus:
 #'
 #' ```
 #' model_type <- tibble(pattern = c("PA-32", "EMB-145", "7[2-8]7", "A320"),
@@ -46,4 +46,27 @@
 #' }
 "model_type"
 
-
+#' heart rate
+#'
+#' Fantasy heart rate data for the demonstration of function `cleaner`.
+#'
+#' @docType data
+#'
+#' @note created thus:
+#' ```
+#' set.seed(2)
+#' heartrate <- data.frame(person = sample(1:100, size = 100, replace = TRUE),
+#'                         condition = sample(letters[1:6], size = 100, replace = TRUE),
+#'                         heartrate = round(rnorm(100, 80, 10)),
+#'                         timestamp = seq.POSIXt(from = as.POSIXct("2022-08-24 08:00"),
+#'                                                to = as.POSIXct("2022-08-24 10:00"),
+#'                                                length.out = 100))
+#' ```
+#' @format A data.frame with 100 rows and 4 columns:
+#' \describe{
+#'   \item{person}{person identifier}
+#'   \item{condition}{fantasy condition a-e in which the person is in at the time of heart rate measurement}
+#'   \item{hearrate}{the heart rate of the person}
+#'   \item{timestamp}{time point of heart rate measurement}
+#' }
+"heartrate"

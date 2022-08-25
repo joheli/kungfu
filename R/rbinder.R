@@ -109,16 +109,28 @@ batchread <- function (file.pattern,
 #' This function "cleans" data.frames, i.e. removes duplicate entries.
 #'
 #' @param d a `data.frame`
-#' @param ufn character, contains column names identifying unique entries
-#' @param orderAlsoBy optional character, contains column name(s) that `d` is ordered by prior to cleaning
-#'
+#' @param ufn character, contains column names identifying unique entries (`ufn` is an abbreviation of "unique field names")
+#' @param orderAlsoBy optional character, specifies column name that `d` is ordered by prior to cleaning
+#' @param decr logical, specifying if `orderAlsoBy` is to be sorted in a decreasing fashion (defaults to `FALSE`)
 #' @return a cleaned (i.e. deduplicated) `data.frame`
+#' @examples
+#' # clean heart rate data, only allow first measurement per person and condition
+#' onlyfirst <- cleaner(heartrate, c("person", "condition"), "timestamp")
+#' # alternatively, only allow last measurement
+#' onlylast <- cleaner(heartrate, c("person", "condition"), "timestamp", TRUE)
 #' @export
-cleaner <- function(d, ufn, orderAlsoBy = character()) {
-  ufn_ <- c(ufn, orderAlsoBy)
+cleaner <- function(d, ufn, orderAlsoBy = character(), decr = FALSE) {
+  ufn_ <- ufn
+  colns <- colnames(d) # save column names
+  # if "orderAlsoBy" provided, add column ".order"
+  if (length(orderAlsoBy) > 0) {
+    d$.order <- order(d[, orderAlsoBy], decreasing = decr)
+    ufn_ <- c(ufn, ".order")
+  }
   d %>% arrange(across(all_of(ufn_))) %>%
     group_by(across(all_of(ufn))) %>%
     slice(n = 1) %>%
+    select(all_of(colns)) %>% # do not include column name ".order"
     as.data.frame
 }
 
