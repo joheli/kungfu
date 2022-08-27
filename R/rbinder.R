@@ -104,37 +104,6 @@ batchread <- function (file.pattern,
   return(df.list)
 }
 
-#' cleaner
-#'
-#' This function "cleans" data.frames, i.e. removes duplicate entries.
-#'
-#' @param d a `data.frame`
-#' @param ufn character, contains column names identifying unique entries (`ufn` is an abbreviation of "unique field names")
-#' @param orderAlsoBy optional character, specifies column name that `d` is ordered by prior to cleaning
-#' @param decr logical, specifying if `orderAlsoBy` is to be sorted in a decreasing fashion (defaults to `FALSE`)
-#' @return a cleaned (i.e. deduplicated) `data.frame`
-#' @examples
-#' # clean heart rate data, only allow first measurement per person and condition
-#' onlyfirst <- cleaner(heartrate, c("person", "condition"), "timestamp")
-#' # alternatively, only allow last measurement
-#' onlylast <- cleaner(heartrate, c("person", "condition"), "timestamp", TRUE)
-#' @export
-cleaner <- function(d, ufn, orderAlsoBy = character(), decr = FALSE) {
-  ufn_ <- ufn
-  colns <- colnames(d) # save column names
-  # if "orderAlsoBy" provided, add column ".order"
-  if (length(orderAlsoBy) > 0) {
-    d$.order <- order(d[, orderAlsoBy], decreasing = decr)
-    ufn_ <- c(ufn, ".order")
-  }
-  d %>% arrange(across(all_of(ufn_))) %>%
-    group_by(across(all_of(ufn))) %>%
-    slice(n = 1) %>%
-    select(all_of(colns)) %>% # do not include column name ".order"
-    as.data.frame
-}
-
-
 # key has been superseded by key2, as latter is at least ten times quicker
 key <- function(d, ufn = NULL) {
   k <- NULL
@@ -157,20 +126,6 @@ key2 <- function(d, ufn = NULL) {
   # if, however, ufn refers to multiple colums, entries of those columns have to be collapsed
   if (length(ufn) > 1) res <- trimws(apply(ds, 1, paste, collapse = ""))
   res
-}
-
-# accepts two data.frames
-# returns a data.frame
-cleaned <- function(before, after) {
-  k.before <- key2(before)
-  k.after <- key2(after)
-  i <-
-    !(k.before %in% k.after) |
-    duplicated(k.before) # warning: assumption!
-  # it is assumed, that 'after' was cleaned with cleaner(), i.e. duplicates were removed!
-  # this assumption (i.e. that duplicates were removed) does not hold for other functions
-  # this function is not agnostic of the function performing the cleaning
-  before[i,]
 }
 
 # accepts two data.frames and a character vector

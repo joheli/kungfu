@@ -47,16 +47,29 @@ postgresql_uploader <- function(con, r_df, pg_table = deparse(substitute(r_df)),
 
   #     prepare complicated insert SQL statement:
   insert_ <- paste("INSERT INTO", pg_table)
-  select_ <- paste("SELECT", paste(fn, collapse = ", "), "FROM", temp_table_name)
-  where_ <- paste("WHERE",
-                  paste(paste0(unique.field.names, " NOT IN (SELECT ", unique.field.names, " FROM ", pg_table, ")"),
-                        collapse = " AND "))
-  where2_ <- paste("WHERE",
-                   paste(paste0(unique.field.names, " IN (SELECT ", unique.field.names, " FROM ", pg_table, ")"),
-                         collapse = " OR "))
-  uploaded_sql <- paste(select_, where_)
-  not_uploaded_sql <- paste(select_, where2_)
-  insert_sql <- paste(insert_, select_, where_)
+  # SELECT a.fallnr, a.station_kurz, a.abteilung_kurz, a.beginn, a.ende
+  # FROM temp_tim_20220827132601 a
+  # LEFT JOIN bewegung b USING(fallnr, beginn)
+  # WHERE b.fallnr IS NULL
+  select_ <- paste0("SELECT ", paste(paste0("a.", fn), collapse = ", "), " FROM ", temp_table_name, " a ",
+                   "LEFT JOIN ", pg_table, " b USING(", paste(unique.field.names, collapse = ", "), ") ",
+                   "WHERE ", paste0("b.", unique.field.names[1]))
+  select_null_ <- paste(select_, "IS NULL")
+  select_not_null_ <- paste(select_, "IS NOT NULL")
+
+  uploaded_sql <- select_null_
+  not_uploaded_sql <- select_not_null_
+  insert_sql <- paste(insert_, select_null_)
+  # select_ <- paste("SELECT", paste(fn, collapse = ", "), "FROM", temp_table_name)
+  # where_ <- paste("WHERE",
+  #                 paste(paste0(unique.field.names, " NOT IN (SELECT ", unique.field.names, " FROM ", pg_table, ")"),
+  #                       collapse = " AND "))
+  # where2_ <- paste("WHERE",
+  #                  paste(paste0(unique.field.names, " IN (SELECT ", unique.field.names, " FROM ", pg_table, ")"),
+  #                        collapse = " OR "))
+  # uploaded_sql <- paste(select_, where_)
+  # not_uploaded_sql <- paste(select_, where2_)
+  # insert_sql <- paste(insert_, select_, where_)
   #     prepare complicated update SQL statement:
   update_ <- paste("UPDATE", pg_table, "SET")
   sets_ <- paste(paste(fn, "=", paste0(paste0(temp_table_name, "."), fn)), collapse = ", ")
