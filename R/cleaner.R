@@ -42,7 +42,16 @@ cleaner <- function(d, ufn, orderAlsoBy = character(), decr = FALSE) {
 #' # show whether 'heartrate' contains duplicates
 #' is_clean(heartrate, c("person", "condition")) # returns false
 is_clean <- function(d, ufn = names(d)) {
-  nrow(d) == nrow(unique(d[, ufn]))
+  # convert to data.frame
+  # this is necessary, as tibbles with one column have length 1 regardless of number of entries
+  d <- as.data.frame(d)
+  result = FALSE
+  if (length(ufn) == 1) {
+    result = nrow(d) == length(unique(d[, ufn]))
+  } else {
+    result = nrow(d) == nrow(unique(d[, ufn]))
+  }
+  result
 }
 
 #' @rdname cleaner

@@ -10,10 +10,13 @@
 #' @param pg_table character specifying existing PostgreSQL table name; the referred table on the
 #' PostgreSQL backend must have the same column names as `r_df`; `pg_table` defaults to name of object passed
 #' as `r_df` (i.e. `deparse(substitute(r_df))`).
-#' @param unique.field.names character specifying unique column names; please note, that column names
-#' of `r_df` and `pg_table` must be identical!
+#' @param unique.field.names character specifying unique column names as defined in PostgreSQL table constraints
+#' (i.e. primary key); please note, that column names of `r_df` and `pg_table` must be identical!
 #' @param update logical, specifying whether to update existing entries as defined by `unique.field.names`;
 #' defaults to `TRUE`.
+#' @param clean_r_df logical, specifying whether to clean `r_df` with function \link[kungfu]{cleaner},
+#' if duplicates are found; defaults to `TRUE`, as the PostgreSQL backend will terminate the upload with an
+#' error if primary key constraints are violated.
 #'
 #' @return `postgresql_uploader` returns a `list` with information about effected inserts and updates
 #'
@@ -24,7 +27,7 @@
 #'
 #' @export
 postgresql_uploader <- function(con, r_df, pg_table = deparse(substitute(r_df)),
-                                unique.field.names, update = TRUE) {
+                                unique.field.names, update = TRUE, clean_r_df = TRUE) {
   # extract field names - these *must* match postgresql table field names
   fn <- colnames(r_df)
 
@@ -47,10 +50,6 @@ postgresql_uploader <- function(con, r_df, pg_table = deparse(substitute(r_df)),
 
   #     prepare complicated insert SQL statement:
   insert_ <- paste("INSERT INTO", pg_table)
-  # SELECT a.fallnr, a.station_kurz, a.abteilung_kurz, a.beginn, a.ende
-  # FROM temp_tim_20220827132601 a
-  # LEFT JOIN bewegung b USING(fallnr, beginn)
-  # WHERE b.fallnr IS NULL
   select_ <- paste0("SELECT ", paste(paste0("a.", fn), collapse = ", "), " FROM ", temp_table_name, " a ",
                    "LEFT JOIN ", pg_table, " b USING(", paste(unique.field.names, collapse = ", "), ") ",
                    "WHERE ", paste0("b.", unique.field.names[1]))
@@ -60,17 +59,7 @@ postgresql_uploader <- function(con, r_df, pg_table = deparse(substitute(r_df)),
   uploaded_sql <- select_null_
   not_uploaded_sql <- select_not_null_
   insert_sql <- paste(insert_, select_null_)
-  # select_ <- paste("SELECT", paste(fn, collapse = ", "), "FROM", temp_table_name)
-  # where_ <- paste("WHERE",
-  #                 paste(paste0(unique.field.names, " NOT IN (SELECT ", unique.field.names, " FROM ", pg_table, ")"),
-  #                       collapse = " AND "))
-  # where2_ <- paste("WHERE",
-  #                  paste(paste0(unique.field.names, " IN (SELECT ", unique.field.names, " FROM ", pg_table, ")"),
-  #                        collapse = " OR "))
-  # uploaded_sql <- paste(select_, where_)
-  # not_uploaded_sql <- paste(select_, where2_)
-  # insert_sql <- paste(insert_, select_, where_)
-  #     prepare complicated update SQL statement:
+  #     update statement
   update_ <- paste("UPDATE", pg_table, "SET")
   sets_ <- paste(paste(fn, "=", paste0(paste0(temp_table_name, "."), fn)), collapse = ", ")
   from_ <- paste("FROM", temp_table_name, "WHERE")
@@ -79,6 +68,17 @@ postgresql_uploader <- function(con, r_df, pg_table = deparse(substitute(r_df)),
 
   # initialize return list
   info <- list(failure = "upload failed")
+
+  # check, if r_df needs to be cleaned
+  if (clean_r_df) {
+    if (!is_clean(r_df, ufn = unique.field.names)) {
+      r_df_c1 <- cleaner(r_df, ufn = unique.field.names) # remove duplicates
+      r_df_c2 <- cleaned(r_df, r_df_c1)
+      r_df <- r_df_c1
+      message("Duplicate entries in 'r_df' were removed:")
+      print(r_df_c2)
+    }
+  }
 
   # try to upload data
   tryCatch({
