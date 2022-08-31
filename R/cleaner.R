@@ -75,6 +75,6 @@ cleaned <- function(before, after) {
     duplicated(k.before) # warning: assumption!
   # it is assumed, that 'after' was cleaned with cleaner(), i.e. duplicates were removed!
   # this assumption (i.e. that duplicates were removed) does not hold for other functions
-  # this function is not agnostic of the function performing the cleaning
-  before[i,]
+  # this function is not agnostic to the function performing the cleaning
+  before[i, ]
 }
