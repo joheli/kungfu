@@ -20,7 +20,7 @@ dist2df <- function(x) {
 
   # Convert matrix to data.frame
   df <- as.data.frame(m)
-  df[, "from"] <- 1:nrow(df)
+  df[, "from"] <- rownames(df)
 
   # Convert to long format
   dl <- pivot_longer(df,
@@ -80,9 +80,9 @@ chunks <- function(x, max.distance = NULL,
   #         if *no* chunk has two or more entries
   if (chunks.2.sum == 0) {
     if (which.chunk == "all") {
-        return(multi.chunk.empty)
+      return(multi.chunk.empty)
     } else {
-        return(single.chunk.empty)
+      return(single.chunk.empty)
     }
 
   } else {
@@ -102,14 +102,43 @@ chunks <- function(x, max.distance = NULL,
          random = x[cuts == random.cut])
 }
 
+### COPY FROM HERE
+
+# this function returns a logical marking entries in a vector that have a distance *below* min.dist
+below_min.dist <- function(x, min.dist = 0) {
+  xn <- x
+  nxn <- 1:length(x)
+  names(xn) <- nxn
+
+  uncompatibleindices <- function(x) {
+    dist2df(dist(x)) %>%
+      filter(from != to) %>%
+      filter(distance < min.dist) %>%
+      select(-distance)
+  }
+
+  df <- uncompatibleindices(xn)
+
+  selecao <- rep(TRUE, length(x))
+
+  while (nrow(df) > 0) {
+    selecao[nxn == df$to[1]] <- FALSE
+    k <- xn[selecao]
+    df <- uncompatibleindices(k)
+  }
+
+  selecao
+}
+
 #' Distance filter
 #'
 #' Filter entries of a vector \code{d} of class \code{numeric}, \code{integer}, \code{Date}, or \code{POSIXt}
 #' according to maximal distance \code{max.dist}.
 #'
 #' @param d a \code{numeric}, \code{integer}, \code{Date}, or \code{POSIXt}
-#' @param max.dist \code{numeric} specifying maximal distance entries in \code{d} are allowed to have to be retained
-#' @param temporal.unit only applies, if \code{d} is of class \code{Date} or \code{POSIXt}; accepted values are "day", "second", "minute", "week", "year".
+#' @param min.dist \code{numeric} specifying minimal distance that entries in \code{d} are allowed to have to be retained
+#' @param max.dist \code{numeric} specifying maximal distance that entries in \code{d} are allowed to have to be retained
+#' @param temporal.unit only applies, if \code{d} is of class \code{Date} or \code{POSIXt}; accepted values are "days", "seconds", "minutes", "hours", "weeks", "years".
 #' @param which.chunk controls output and display of chunks satisfying the restriction imposed by \code{max.dist}; accepted
 #' accepted values are all", "biggest", "first", and "random"
 #'
@@ -136,19 +165,36 @@ chunks <- function(x, max.distance = NULL,
 #' test %>% group_by(group) %>% filter(dfilter(time, max.dist = 1000, which.chunk = "first"))
 #' # please note that in a grouped tibble, you cannot use dfilter inside filter()
 #' test %>% group_by(group) %>% group_modify(~ dfilter(.x[, "pos"], max.dist = 15, which.chunk = "all"))
-dfilter <- function(d, max.dist = Inf,
-                    temporal.unit = c("day", "second", "minute", "week", "year"),
-                    which.chunk = "all") {
+dfilter <- function(d, min.dist = 0, max.dist = Inf,
+                     temporal.unit = c("days", "seconds", "minutes", "hours", "weeks", "years"),
+                     which.chunk = "all") {
   # Housekeeping: retain original copy of d
   d.orig <- d
+  d.orig2 <- d # backup copy used for special case
   d.name <- class(d)[1] # use class to create a column name, if needed
+  is_tbl_df <- inherits(d, "tbl_df")
 
   # Internal functions
-  uts <- function(x) as.numeric(as.POSIXct(x))  # function to transform to unix timestamp
+  # function to transform to unix timestamp
+  uts <- function(x) as.numeric(as.POSIXct(x))
+  # substract smallest value from all
+  red <- function(x) x - min(x)
+  # combine uts and red
+  uts_red <- function(x) red(uts(x))
+  # transform time to distance according to temporal.unit
+  time2dist <- function(x) {
+    switch(temporal.unit,
+           days = x * 60 * 60 * 24,
+           seconds = x,
+           hours = x * 60 * 60,
+           minutes = x * 60,
+           weeks = x * 60 * 60 * 24 * 7,
+           years = x * 60 * 60 * 24 * 365)
+  }
 
   # with group_map, a tibble with one column can be passed as d
   # in such a case, additional extraction is required for argument validation (see below) to work
-  if (inherits(d, "tbl_df")) {
+  if (is_tbl_df) {
     if (dim(d)[2] == 1) {
       d.name <- names(d)
       d <- pull(d, 1)
@@ -161,44 +207,81 @@ dfilter <- function(d, max.dist = Inf,
     stop("Please supply a numeric, integer, Date, or POSIXt.")
   }
 
-  # Return d unchanged if max.dist is Inf!
-  if (max.dist == Inf) return(d)
-
+  # determine temporal unit
   temporal.unit <- match.arg(temporal.unit)
 
+  # transform d, min.dist, and max.dist in case d is a temporal vector
   if (inherits(d, c("Date", "POSIXt"))) {
-    d <- uts(d)
-    max.dist <- switch(temporal.unit,
-                       day = max.dist * 60 * 60 * 24,
-                       second = max.dist,
-                       minute = max.dist * 60,
-                       week = max.dist * 60 * 60 * 24 * 7,
-                       year = max.dist * 60 * 60 * 24 * 365)
+    d <- uts_red(d)
+    min.dist <- time2dist(min.dist)
+    max.dist <- time2dist(max.dist)
   }
 
-  # remove duplicates
-  d <- unique(d)
-  # record names of unique entries
-  d.orig.unique <- d.orig[!duplicated(d)]
-  # translate d to d.orig.unique
-  d.trans <- data.frame(d = d, d.orig = d.orig.unique)
+  # apply min.dist (if min.dist == 0, all values in d are retained)
+  at_least.min.dist <- below_min.dist(d, min.dist = min.dist)
 
-  # Chunks
-  ch <- chunks(d, max.distance = max.dist, which.chunk = which.chunk)
-
-  # Return
-  res0 <- data.frame(d.orig = d.orig) %>% inner_join(d.trans, by = "d.orig")
-
-  if (inherits(ch, "data.frame")) {
-    res <- res0 %>%
-      inner_join(ch, by = c("d" = "x")) %>%
-      select(-d, ) %>%
-      rename(!!d.name := d.orig)
+  # Return now if max.dist is Inf!
+  if (max.dist == Inf) {
+    if (is_tbl_df) {
+      # return data.frame
+      return(d.orig2[at_least.min.dist,])
     } else {
-    res1 <- res0 %>%
-      inner_join(data.frame(d = ch), by = "d") %>%
-      pull(d.orig)
-    res <- d.orig %in% res1
+      # return vector
+      return(d.orig[at_least.min.dist])
+    }
+  }
+
+  # otherwise, continue
+  d <- d[at_least.min.dist]
+
+  # Are values in d unique?
+  # If not, they need to be made unique by adding a small random number!
+  # Why? Because function chunk() only accepts unique entries.
+  # Without making values unique, duplicates would be filtered out, which is not desired!
+  if (length(unique(d)) < length(d)) {
+    # Ok, d does contain duplicates, i.e. we must make values unique; d.x is to contain ("uniquified") entries only
+    # remove duplicates
+    d.u <- unique(d)
+    # if d.u contains only one entry, set small_value (required for noise generation) to arbitrary value
+    if (length(d.u) == 1) {
+      small_value = 1/1000
+    } else {
+      # what is the smallest difference between unique entries
+      min.diff.u <- min(abs(diff(d.u)))
+      # divide that by 1000
+      small_value = min.diff.u/1000
+    }
+    # function to create small random noise
+    noise <- function() runif(n = length(d), min = -small_value, max = small_value)
+    # now add noise to d ...
+    d.x <- d + noise()
+    # ... and make sure each value is in fact unique!
+    while (length(unique(d.x)) < length(d)) d.x <- d + noise()
+    # correct max.dist according to noise added;
+    # as noise added can be positive or negative, add twice maximal absolute value of noise added
+    noise.added <- d.x - d # first, calculate noise added
+    max.dist.corr <- max.dist + 2 * max(abs(noise.added))
+  } else {
+    # no duplicates found! d.x is equal to d
+    d.x <- d
+    # no correction necessary
+    max.dist.corr <- max.dist
+  }
+
+  # finally, create translation matrix
+  d.trans <- data.frame(d.orig = d.orig, d = d, d.x = d.x)
+
+  # Chunks (only accepts unique values!)
+  ch <- chunks(d.x, max.distance = max.dist.corr, which.chunk = which.chunk)
+
+  # process according to return type of chunks
+  if (inherits(ch, "data.frame")) {
+    res <- ch %>%
+      inner_join(d.trans, by = c("x" = "d.x")) %>%
+      select(d.orig, chunk) %>%
+      rename(!!d.name := d.orig)
+  } else {
+    res <- d.trans$d.x %in% ch
   }
 
   return(res)

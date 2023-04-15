@@ -25,10 +25,12 @@ airplanes
 A \code{tibble} representing a subset of \code{nycflights13} for the demonstration of function \code{pattern_join}
 }
 \note{
-created thus:\preformatted{# set seed
+created thus:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{# set seed
 set.seed(1)
 # extract twenty rows of nycflights13::planes
 airplanes <- nycflights13::planes \%>\% slice(sample(1:nrow(nycflights13::planes), 20))
-}
+}\if{html}{\out{</div>}}
 }
 \keyword{datasets}

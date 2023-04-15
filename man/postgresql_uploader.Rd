@@ -10,7 +10,8 @@ postgresql_uploader(
   r_df,
   pg_table = deparse(substitute(r_df)),
   unique.field.names,
-  update = TRUE
+  update = TRUE,
+  clean_r_df = TRUE
 )
 
 killConnections()
@@ -24,11 +25,15 @@ killConnections()
 PostgreSQL backend must have the same column names as \code{r_df}; \code{pg_table} defaults to name of object passed
 as \code{r_df} (i.e. \code{deparse(substitute(r_df))}).}
 
-\item{unique.field.names}{character specifying unique column names; please note, that column names
-of \code{r_df} and \code{pg_table} must be identical!}
+\item{unique.field.names}{character specifying unique column names as defined in PostgreSQL table constraints
+(i.e. primary key); please note, that column names of \code{r_df} and \code{pg_table} must be identical!}
 
 \item{update}{logical, specifying whether to update existing entries as defined by \code{unique.field.names};
 defaults to \code{TRUE}.}
+
+\item{clean_r_df}{logical, specifying whether to clean \code{r_df} with function \link[kungfu]{cleaner},
+if duplicates are found; defaults to \code{TRUE}, as the PostgreSQL backend will terminate the upload with an
+error if primary key constraints are violated.}
 }
 \value{
 \code{postgresql_uploader} returns a \code{list} with information about effected inserts and updates

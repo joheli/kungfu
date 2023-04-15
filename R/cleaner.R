@@ -24,7 +24,7 @@ cleaner <- function(d, ufn, orderAlsoBy = character(), decr = FALSE) {
   }
   d %>% arrange(across(all_of(ufn_))) %>%
     group_by(across(all_of(ufn))) %>%
-    slice(n = 1) %>%
+    slice_head(n = 1) %>%
     select(all_of(colns)) %>% # do not include column name ".order"
     as.data.frame
 }

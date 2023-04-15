@@ -6,17 +6,20 @@
 \usage{
 dfilter(
   d,
+  min.dist = 0,
   max.dist = Inf,
-  temporal.unit = c("day", "second", "minute", "week", "year"),
+  temporal.unit = c("days", "seconds", "minutes", "hours", "weeks", "years"),
   which.chunk = "all"
 )
 }
 \arguments{
 \item{d}{a \code{numeric}, \code{integer}, \code{Date}, or \code{POSIXt}}
 
-\item{max.dist}{\code{numeric} specifying maximal distance entries in \code{d} are allowed to have to be retained}
+\item{min.dist}{\code{numeric} specifying minimal distance that entries in \code{d} are allowed to have to be retained}
 
-\item{temporal.unit}{only applies, if \code{d} is of class \code{Date} or \code{POSIXt}; accepted values are "day", "second", "minute", "week", "year".}
+\item{max.dist}{\code{numeric} specifying maximal distance that entries in \code{d} are allowed to have to be retained}
+
+\item{temporal.unit}{only applies, if \code{d} is of class \code{Date} or \code{POSIXt}; accepted values are "days", "seconds", "minutes", "hours", "weeks", "years".}
 
 \item{which.chunk}{controls output and display of chunks satisfying the restriction imposed by \code{max.dist}; accepted
 accepted values are all", "biggest", "first", and "random"}
