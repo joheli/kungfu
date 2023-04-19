@@ -33,12 +33,14 @@ dist2df <- function(x) {
   return(dl)
 }
 
+# 'chunks' is the heart of distance filter; it returns clusters of sizes determined by max.distance
 chunks <- function(x, max.distance = NULL,
                    which.chunk = c("all", "biggest", "first", "random")) {
   # empty result objects
   single.chunk.empty <- numeric()
   multi.chunk.empty <- data.frame(x = numeric(), chunk = numeric())
   # Argument validation
+  which.chunk <- match.arg(which.chunk)
   if (!inherits(x, c("numeric", "integer"))) stop("Please supply a numeric or integer.")
   if (length(x) < 2) {
     if (which.chunk == "all") {
@@ -47,8 +49,14 @@ chunks <- function(x, max.distance = NULL,
       return(single.chunk.empty)
     }
   }
+  # throw error if no max.distance supplied
   if (is.null(max.distance)) stop("Please supply a maximal distance!")
-  which.chunk <- match.arg(which.chunk)
+
+  # if max.distance is Inf, return all values
+  if (max.distance == Inf) {
+    if (which.chunk == "all") return(data.frame(x = x, chunk = 1))
+    return(x)
+  }
 
   # If duplicates present: stop
   if (length(unique(x)) < length(x)) stop("Please supply a vector without duplicates.")
@@ -172,116 +180,124 @@ dfilter <- function(d, min.dist = 0, max.dist = Inf,
   d.orig <- d
   d.orig2 <- d # backup copy used for special case
   d.name <- class(d)[1] # use class to create a column name, if needed
-  is_tbl_df <- inherits(d, "tbl_df")
+  is_tbl <- inherits(d, c("tbl_df", "data.frame")) # check if table
 
-  # Internal functions
-  # function to transform to unix timestamp
-  uts <- function(x) as.numeric(as.POSIXct(x))
-  # substract smallest value from all
-  red <- function(x) x - min(x)
-  # combine uts and red
-  uts_red <- function(x) red(uts(x))
-  # transform time to distance according to temporal.unit
-  time2dist <- function(x) {
-    switch(temporal.unit,
-           days = x * 60 * 60 * 24,
-           seconds = x,
-           hours = x * 60 * 60,
-           minutes = x * 60,
-           weeks = x * 60 * 60 * 24 * 7,
-           years = x * 60 * 60 * 24 * 365)
+  # extract values
+  e <- d
+  e.orig <- d.orig
+  if (is_tbl) {
+    e <- pull(d, 1)
+    e.orig <- e
   }
 
-  # with group_map, a tibble with one column can be passed as d
-  # in such a case, additional extraction is required for argument validation (see below) to work
-  if (is_tbl_df) {
+  # only one entry?
+  only_one <- FALSE
+  if (is_tbl) {
+    if (nrow(d) < 2) only_one <- TRUE
+    # btw: ajdust d.name for tables
     if (dim(d)[2] == 1) {
       d.name <- names(d)
-      d <- pull(d, 1)
-      d.orig <- d
-    }
-  }
-
-  # Argument validation
-  if (!inherits(d, c("numeric", "integer", "Date", "POSIXt"))) {
-    stop("Please supply a numeric, integer, Date, or POSIXt.")
-  }
-
-  # determine temporal unit
-  temporal.unit <- match.arg(temporal.unit)
-
-  # transform d, min.dist, and max.dist in case d is a temporal vector
-  if (inherits(d, c("Date", "POSIXt"))) {
-    d <- uts_red(d)
-    min.dist <- time2dist(min.dist)
-    max.dist <- time2dist(max.dist)
-  }
-
-  # apply min.dist (if min.dist == 0, all values in d are retained)
-  at_least.min.dist <- below_min.dist(d, min.dist = min.dist)
-
-  # Return now if max.dist is Inf!
-  if (max.dist == Inf) {
-    if (is_tbl_df) {
-      # return data.frame
-      return(d.orig2[at_least.min.dist,])
     } else {
-      # return vector
-      return(d.orig[at_least.min.dist])
+      stop("Sorry cannot deal with more than one column.")
     }
-  }
-
-  # otherwise, continue
-  d <- d[at_least.min.dist]
-
-  # Are values in d unique?
-  # If not, they need to be made unique by adding a small random number!
-  # Why? Because function chunk() only accepts unique entries.
-  # Without making values unique, duplicates would be filtered out, which is not desired!
-  if (length(unique(d)) < length(d)) {
-    # Ok, d does contain duplicates, i.e. we must make values unique; d.x is to contain ("uniquified") entries only
-    # remove duplicates
-    d.u <- unique(d)
-    # if d.u contains only one entry, set small_value (required for noise generation) to arbitrary value
-    if (length(d.u) == 1) {
-      small_value = 1/1000
-    } else {
-      # what is the smallest difference between unique entries
-      min.diff.u <- min(abs(diff(d.u)))
-      # divide that by 1000
-      small_value = min.diff.u/1000
-    }
-    # function to create small random noise
-    noise <- function() runif(n = length(d), min = -small_value, max = small_value)
-    # now add noise to d ...
-    d.x <- d + noise()
-    # ... and make sure each value is in fact unique!
-    while (length(unique(d.x)) < length(d)) d.x <- d + noise()
-    # correct max.dist according to noise added;
-    # as noise added can be positive or negative, add twice maximal absolute value of noise added
-    noise.added <- d.x - d # first, calculate noise added
-    max.dist.corr <- max.dist + 2 * max(abs(noise.added))
   } else {
-    # no duplicates found! d.x is equal to d
-    d.x <- d
-    # no correction necessary
-    max.dist.corr <- max.dist
+    if (length(d) < 2) only_one <- TRUE
   }
 
-  # finally, create translation matrix
-  d.trans <- data.frame(d.orig = d.orig, d = d, d.x = d.x)
+  # only proceed here if more than one entry
+  if (!only_one) {
+    # Internal functions
+    # function to transform to unix timestamp
+    uts <- function(x) as.numeric(as.POSIXct(x))
+    # substract smallest value from all
+    red <- function(x) x - min(x)
+    # combine uts and red
+    uts_red <- function(x) red(uts(x))
+    # transform time to distance according to temporal.unit
+    time2dist <- function(x) {
+      switch(temporal.unit,
+             days = x * 60 * 60 * 24,
+             seconds = x,
+             hours = x * 60 * 60,
+             minutes = x * 60,
+             weeks = x * 60 * 60 * 24 * 7,
+             years = x * 60 * 60 * 24 * 365)
+    }
 
-  # Chunks (only accepts unique values!)
-  ch <- chunks(d.x, max.distance = max.dist.corr, which.chunk = which.chunk)
+    # Content validation
+    if (!inherits(e, c("numeric", "integer", "Date", "POSIXt"))) {
+      stop("Please supply a numeric, integer, Date, or POSIXt.")
+    }
+
+    # determine temporal unit
+    temporal.unit <- match.arg(temporal.unit)
+
+    # transform e, min.dist, and max.dist in case d is a temporal vector
+    if (inherits(e, c("Date", "POSIXt"))) {
+      e <- uts_red(e)
+      min.dist <- time2dist(min.dist)
+      max.dist <- time2dist(max.dist)
+    }
+
+    # apply min.dist (if min.dist == 0, all values in d are retained)
+    at_least.min.dist <- below_min.dist(e, min.dist = min.dist)
+
+    # otherwise, continue
+    e <- e[at_least.min.dist]
+
+    # Are values in e unique?
+    # If not, they need to be made unique by adding a small random number!
+    # Why? Because function chunk() only accepts unique entries.
+    # Without making values unique, duplicates would be filtered out, which is not desired!
+    if (length(unique(e)) < length(e)) {
+      # Ok, d does contain duplicates, i.e. we must make values unique; d.x is to contain ("uniquified") entries only
+      # remove duplicates
+      e.u <- unique(e)
+      # if d.u contains only one entry, set small_value (required for noise generation) to arbitrary value
+      if (length(e.u) == 1) {
+        small_value = 1/1000
+      } else {
+        # what is the smallest difference between unique entries
+        min.diff.u <- min(abs(diff(e.u)))
+        # divide that by 1000
+        small_value = min.diff.u/1000
+      }
+      # function to create small random noise
+      noise <- function() runif(n = length(e), min = -small_value, max = small_value)
+      # now add noise to d ...
+      e.x <- e + noise()
+      # ... and make sure each value is in fact unique!
+      while (length(unique(e.x)) < length(e)) e.x <- e + noise()
+      # correct max.dist according to noise added;
+      # as noise added can be positive or negative, add twice maximal absolute value of noise added
+      noise.added <- e.x - e # first, calculate noise added
+      max.dist.corr <- max.dist + 2 * max(abs(noise.added))
+    } else {
+      # no duplicates found! d.x is equal to d
+      e.x <- e
+      # no correction necessary
+      max.dist.corr <- max.dist
+    }
+
+    # finally, create translation matrix
+    e.trans <- data.frame(e.orig = e.orig[at_least.min.dist], e = e, e.x = e.x)
+
+    # Chunks (only accepts unique values!)
+    ch <- chunks(e.x, max.distance = max.dist.corr, which.chunk = which.chunk)
+  } else {
+    # if only one entry
+    ch <- chunks(0, max.distance = 0, which.chunk = which.chunk)
+    e.trans <- data.frame(e.orig = e.orig[1], e = 0, e.x = 0) # e.orig[1] has to be passed to conserve type!
+  }
 
   # process according to return type of chunks
   if (inherits(ch, "data.frame")) {
     res <- ch %>%
-      inner_join(d.trans, by = c("x" = "d.x")) %>%
-      select(d.orig, chunk) %>%
-      rename(!!d.name := d.orig)
+      inner_join(e.trans, by = c("x" = "e.x")) %>%
+      select(e.orig, chunk) %>%
+      rename(!!d.name := e.orig)
   } else {
-    res <- d.trans$d.x %in% ch
+    res <- e.trans$e.x %in% ch
   }
 
   return(res)
