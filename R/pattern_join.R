@@ -52,6 +52,8 @@ splitter <- function(d, maxrows = 1000) {
   group_split(g, .keep = FALSE)
 }
 
+## TODO: create new function similarity_join using stringdist::stringsimmatrix!
+
 ## Function pattern_join
 
 #' pattern_join
@@ -177,6 +179,7 @@ pattern_join <- function(x, y, by, nomatch_label = NA, x_split_cutoff = 500, mul
     # join
     result <- lapply(x_split, joiner)
   } else {
+    # TODO: change to package paralelly
     # determine no. of cores
     n.cores <- parallel::detectCores()
 
