@@ -143,6 +143,7 @@ pattern_join <- function(x, y, by, nomatch_label = NA, x_split_cutoff = 500, mul
     rs <- apply(ad, 2, rescale_adist)
 
     # calculate weights of string distances (smaller the shorter a possible string overlap)
+    # TODO: use matchLenMatrix in "testdaten"
     w <- matrix(nchar(x2), ncol=1) %*% (1/nchar(x1))
 
     # compute rescaled and weighted approximate string distances (from here on abbreviated as 'rwasd')
