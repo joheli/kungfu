@@ -62,7 +62,7 @@ rescale_modify <- function(x, modification = c("none", "pull up", "push down")) 
 
 # custom rescale functions used by pattern_join below
 rescale_adist <- function(x) rescale_modify(rescale10(x), "push down")
-rescale_pattern_complexity <- function(x) rescale(x, min = 0.1, max = 1)
+rescale_pattern_complexity <- function(x) rescale(x, min = 0.01, max = 1)
 
 # function matchLen determines match lengths between pattern and target
 matchLen <- function(pattern, target) {
