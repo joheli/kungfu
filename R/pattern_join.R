@@ -1,27 +1,44 @@
 ## Helper functions
 
-# rescale value from 0 to 1
-rescale01 <- function(x) {
+# rescale
+rescale <- function(x, min = 0, max = 1) {
   if (all(diff(x) == 0)) { # if all values are the same ...
     rep(0, length(x))      # ... return vector of zeroes
   } else {
-    (x - min(x))/(max(x)-min(x))
+    # difference between max and min
+    mmd <- max - min
+    result0 <- (x - min(x))/(max(x)-min(x))
+    result <- result0
+    if (mmd != 1) result = result0 * mmd
+    if (min != 0) result = result + min
+    return(result)
   }
 }
+
+# rescale value from 0 to 1
+rescale01 <- function(x) rescale(x, min = 0, max = 1)
 
 # rescale value from 1 to 0
 rescale10 <- function(x) 1 - rescale01(x)
 
-# massage rescaled value by condensing values closer to one (pull up) or closer to zero (push down)
+# massage optionally rescaled value by condensing values closer to maximal (pull up) or minimal (push down) value
 rescale_modify <- function(x, modification = c("none", "pull up", "push down")) {
+  # record min and max of x
+  min.x <- min(x)
+  max.x <- max(x)
+  x01 <- x
+  x.rescale <- FALSE
   # check if argument between 0 and 1
-  if (min(x) < 0 | max(x) > 1) stop("Please provide numeric between 0 and 1.")
+  if (min.x < 0 | max.x > 1) {
+    x.rescale <- TRUE
+    x01 <- rescale(x, min = 0, max = 1)
+  }
   # if all values the same, return x unaltered
   if (all(diff(x) == 0)) return(x)
-  # define helper function to deal with 0 and 1
+  # define helper function 'massage' to deal with 0 and 1
   massage <- function(x) {
     # define arbitrary small number
-    s <- 1e-8
+    s <- min(abs(diff(unique(x01))))/1e6
     # replace zeroes with s
     x[x == 0] <- s
     # replace ones with 1-s
@@ -29,18 +46,44 @@ rescale_modify <- function(x, modification = c("none", "pull up", "push down")) 
     # return
     x
   }
-  # check modification
+  # which modification was requested?
   md <- match.arg(modification)
-  # return based on md
-  switch (md,
-          none = x,
-          `pull up` = rescale01(log(massage(x))),
-          `push down` = rescale01(-log(1 - massage(x)))
-  )
+  # return based on md (i.e. modification requested)
+  result0 <- switch (md,
+                     none = x,
+                     `pull up` = rescale01(log(massage(x01))),
+                     `push down` = rescale01(-log(1 - massage(x01))))
+  # if necessary, rescale
+  result <- result0
+  if (x.rescale) result <- rescale(result0, min = min.x, max = max.x)
+  # return result
+  return(result)
 }
 
-# the rescale function for matchmaker
+# custom rescale functions used by pattern_join below
 rescale_adist <- function(x) rescale_modify(rescale10(x), "push down")
+rescale_pattern_complexity <- function(x) rescale(x, min = 0.1, max = 1)
+
+# function matchLen determines match lengths between pattern and target
+matchLen <- function(pattern, target) {
+  rgx <- regexpr(pattern, target)
+  result0 <- attr(rgx, "match.length")
+  result <- ifelse(result0 == -1, 0, result0) # replace -1 by 0
+  return(result)
+}
+
+# function matchLenMatrix determines match lengths between patterns and targets and puts them in a matrix
+matchLenMatrix <- function(patterns, targets) {
+  mp <- purrr::map(targets, function(y) purrr::map(patterns, function(x) matchLen(x, y)))
+  matrix(unlist(mp), nrow = length(patterns))
+}
+
+# function matchLenMatrix determines match lengths between patterns and targets and puts them in a matrix
+matchLenMatrix2 <- function(patterns, targets) {
+  x <- expand.grid(patterns = patterns, targets = targets)
+  mp <- purrr::map2(x$patterns, x$targets, function(x, y) matchLen(x, y))
+  matrix(unlist(mp), nrow = length(patterns))
+}
 
 # split large data.frame into parts using dplyr::group_split
 splitter <- function(d, maxrows = 1000) {
@@ -51,8 +94,6 @@ splitter <- function(d, maxrows = 1000) {
     group_by(gr)
   group_split(g, .keep = FALSE)
 }
-
-## TODO: create new function similarity_join using stringdist::stringsimmatrix!
 
 ## Function pattern_join
 
@@ -113,10 +154,10 @@ pattern_join <- function(x, y, by, nomatch_label = NA, x_split_cutoff = 500, mul
     f_y <- by
   }
 
-  # TODO: check, if a "nomatch" entry (i.e. one starting with the all-inclusive pattern ".*" exists
-  # in table 'y'
-  # x1 is dealt with below
+  # extract x2 (i.e. the patterns)
   x2 <- pull(y, f_y) %>% as.character
+  # replace non-breaking whitespace with regular space; failing to do may prevent successful matching.
+  x2 <- gsub("\U00A0", " ", x2)
 
   if (!any(grepl("^\\.\\*$", x2))) { # if "nomatch" entry does not exist, add one to 'y'
     jokerpattern <- ".*" # this pattern matches all
@@ -131,23 +172,44 @@ pattern_join <- function(x, y, by, nomatch_label = NA, x_split_cutoff = 500, mul
     message("'y' already contains a 'nomatch' entry.")
   }
 
+  # calculate pattern (character) lengths
+  x2_nchars <- nchar(x2)
+  # calculate "pattern complexity", assumed to correspond to pattern length (0.1 ~ lowest, 1 ~ highest complexity)
+  x2_complexity <- rescale_pattern_complexity(x2_nchars)
+
   # function that does the joining
+  # argument x_part represents a subset of x with identical column names
   joiner <- function(x_part) {
-    # extract fields
+    # extract field x1 (i.e. the targets)
     x1 <- pull(x_part, f_x) %>% as.character
+    # replace non-breaking whitespace with regular space
+    x1 <- gsub("\U00A0", " ", x1)
+
+    # A L W A Y S: patterns are in rows (dimension 1), targets in columns (dimension 2)
 
     # calculate approximate string distances
-    ad <- adist(x2, x1, fixed = F, ignore.case = T)
+    # fixed = FALSE means that x2 (the first argument) is treated as a regular expression
+    ad <- adist(x = x2, y = x1, fixed = F, ignore.case = T)
 
-    # rescale string distances
+    # 1st weight "rs" corresponds to string similarities:
+    # rescale string distances (ad); rs ~ 1 and rs ~ 0 mean little and great distances, respectively.
     rs <- apply(ad, 2, rescale_adist)
 
-    # calculate weights of string distances (smaller the shorter a possible string overlap)
-    # TODO: use matchLenMatrix in "testdaten"
-    w <- matrix(nchar(x2), ncol=1) %*% (1/nchar(x1))
+    # 2nd weight (match overlaps) and 3rd weight (pattern complexity)
+    # calculate match lengths
+    mlm <- matchLenMatrix(x2, x1)
+    # calculate match overlaps, i.e. what proportion of targets are captured by the patterns
+    # create a matrix with target lengths (i.e. lengths of x1)
+    tl <- matrix(rep(nchar(x1), length(x2)), byrow = TRUE, nrow = length(x2))
+    # the overlaps are match lengths divided by target lengths; i.e. the proportions of targets captured by the
+    # regex patterns
+    mlm_ol <- mlm/tl
+    # adjust for pattern complexity, i.e. favor complex (=long) patterns over simple (=short) patterns
+    mlm_ol_pc <- apply(mlm_ol, 2, function(column) column * x2_complexity)
 
     # compute rescaled and weighted approximate string distances (from here on abbreviated as 'rwasd')
-    matches <- rs * w
+    # by multiplying rs with mlm_ol_pc
+    matches <- rs * mlm_ol_pc
     colnames(matches) <- as.character(1:nrow(x_part)) # columns represent row numbers of x
 
     # to avoid errors of type "Undefined global functions or variables", set variables to NULL
@@ -158,15 +220,16 @@ pattern_join <- function(x, y, by, nomatch_label = NA, x_split_cutoff = 500, mul
       as.data.frame %>%
       mutate(uniquepatternnumber = as.character(1:nrow(y))) %>%
       tidyr::pivot_longer(-uniquepatternnumber, # convert to long format
-                   names_to = "uniquerownumber",
-                   values_to = "rwasd") %>%
+                          names_to = "uniquerownumber",
+                          values_to = "rwasd") %>%
       group_by(uniquerownumber) %>%
       slice_max(rwasd, n = 1, with_ties = FALSE) %>% # do not allow more than one match
       arrange(as.numeric(uniquerownumber)) %>%
       inner_join(mutate(x_part, uniquerownumber = as.character(1:n())), by = "uniquerownumber") %>% # inner_join to x_part
       inner_join(mutate(y, uniquepatternnumber = as.character(1:n())), by = "uniquepatternnumber") %>% # inner_join to y
       ungroup() %>%
-      select(-uniquerownumber, -uniquepatternnumber, -rwasd, -pattern) # get rid of temporary columns
+      select(-uniquerownumber, -uniquepatternnumber, -rwasd) # get rid of temporary columns
+    #select(-all_of(c("uniquerownumber", "uniquepatternnumber", "rwasd", "pattern")))
 
     # return
     matches_d
@@ -180,7 +243,6 @@ pattern_join <- function(x, y, by, nomatch_label = NA, x_split_cutoff = 500, mul
     # join
     result <- lapply(x_split, joiner)
   } else {
-    # TODO: change to package paralelly
     # determine no. of cores
     n.cores <- parallel::detectCores()
 
