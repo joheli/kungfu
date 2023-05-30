@@ -15,9 +15,12 @@
 #' onlylast <- cleaner(heartrate, c("person", "condition"), "timestamp", TRUE)
 #' @export
 cleaner <- function(d, ufn, orderAlsoBy = character(), decr = FALSE) {
-  # TODO: if d is a tibble, it has to be converted to a data.frame to avoid warning message: In xtfrm.data.frame(x) : cannot xtfrm data frames
+  #  if d is a tibble, it has to be converted to a data.frame to avoid warning message: In xtfrm.data.frame(x) : cannot xtfrm data frames
+  if (inherits(d, "tbl_df")) d <- as.data.frame(d)
+  # save original unique field names (ufn)
   ufn_ <- ufn
-  colns <- colnames(d) # save column names
+  # save column names
+  colns <- colnames(d)
   # if "orderAlsoBy" provided, add column ".order"
   if (length(orderAlsoBy) > 0) {
     d$.order <- order(d[, orderAlsoBy], decreasing = decr)
