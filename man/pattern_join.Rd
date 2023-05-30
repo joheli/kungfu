@@ -2,16 +2,24 @@
 % Please edit documentation in R/pattern_join.R
 \name{pattern_join}
 \alias{pattern_join}
-\title{pattern_join}
+\alias{common_join}
+\alias{similarity_join}
+\title{common_join, pattern_join, similarity_join}
 \usage{
-pattern_join(
+common_join(
   x,
   y,
   by,
   nomatch_label = NA,
+  nomatch_cutoff = 0.2,
   x_split_cutoff = 500,
-  multicore = TRUE
+  multicore = TRUE,
+  matcher = NULL
 )
+
+pattern_join(...)
+
+similarity_join(...)
 }
 \arguments{
 \item{x}{the first \code{data.frame}}
@@ -25,25 +33,44 @@ unnamed (e.g. \code{"field name in both x and y"}; here, both \code{x} and \code
 \item{nomatch_label}{character or \code{NA}, specifying values joined to entries in \code{x} that do not
 have corresponding match in \code{y}}
 
+\item{nomatch_cutoff}{used by \code{similarity_match}: a numeric between 0 and 1 specifying the similarity
+(using metric \emph{optimal string alignment}, see \link[stringdist]{stringsim}) below which \code{nomatch_label} is
+joined to orginal data (meaning: the entry is treated as a "no match")}
+
 \item{x_split_cutoff}{integer specifying number of rows above which \code{x} is split into smaller
 \code{data.frame} objects; this is necessary, as the joining algorithm cannot handle data.frames with
 many thousand rows.}
 
 \item{multicore}{logical specifying if multiple cores should be used or not; it defaults to \code{TRUE}, although
 benefits in speed only arise if \code{nrow(x)} \emph{is substantially greater} than \code{x_split_cutoff}.}
+
+\item{matcher}{to create a custom join function using \code{common_join}, specify here a function accepting two
+character vectors and returning a matrix with a custom matching metric; e.g. for \code{similarity_join} the custom matching
+function is \code{function(x1, x2) stringdist::stringsimmatrix(a = x2, b = x1, method = "osa")}.}
 }
 \value{
 \code{data.frame} of merged \code{x} and \code{y} based on found similarities columns specified by argument \code{by}.
 }
 \description{
-Function to join two \code{data.frame} objects based on \emph{regex} patterns. The \emph{first} \code{data.frame}
-contains a \emph{dirty} column (e.g. "real-world" data originating from a free text field) that needs grouping.
-The \emph{second} \code{data.frame} maps its rows to above mentioned \emph{dirty} column using the unique patterns contained in
-one of its own columns.
+\code{pattern_join} and \code{similarity_join} join two \code{data.frame} objects based on \emph{regex} patterns or similarities to a reference, respectively. The \emph{first} \code{data.frame}
+contains a \emph{dirty} column (i.e. "real-world" data originating from a free text field) that needs grouping, categorizing, or classifying based on its content.
+The \emph{second} \code{data.frame} maps its rows to above \emph{dirty} column. It achieves this using the unique patterns (\code{pattern_join}) or references (\code{similarity_join}) given in
+one of its own columns (specified by parameter \code{by}, see below). \code{common_join} is a "common trunk" used by both
+\code{pattern_join} and \code{similarity_join} and can be used to create custom join functions (provided a custom \code{matcher}
+function is given, see below).
 }
 \examples{
 # pattern_join 'airplanes' with 'model_type' by columns 'model' and 'pattern'
 airplanes_model_type <- pattern_join(airplanes, model_type, c("model" = "pattern"), multicore = FALSE)
+# pattern_join 'airplanes' with 'model_type' by columns 'model' and 'pattern'
+airplanes_model_type <- pattern_join(airplanes, model_type, c("model" = "pattern"), multicore = FALSE)
+# test data for similarity_join
+dirty <- data.frame(sample = 1:6, description = c("Bergerx", "Mueler", "Horsst", "Kinga", "Mannn", "Schneemann"))
+reference <- data.frame(reference = c("Berger", "Mueller", "Horst", "King", "Mann", "Mustermann"))
+# similarity_join with default nomatch_cutoff
+dirty \%>\% similarity_join(reference, by = c("description" = "reference"))
+# to avoid mapping "Schneemann" to "Mustermann", increase nomatch_cutoff (default 0.2) to at least 0.51
+dirty \%>\% similarity_join(reference, by = c("description" = "reference"), nomatch_cutoff = 0.51)
 }
 \seealso{
 \code{pattern_join} is similar to \link[fuzzyjoin]{regex_join}

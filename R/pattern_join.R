@@ -141,7 +141,59 @@ joiner <- function(x_part, y, f_x, x2, matcher) {
   matches_d
 }
 
-# common join: a common function that is used by pattern_join and similarity_join
+# common join: a common trunk that is used by pattern_join and similarity_join
+
+#' @title common_join, pattern_join, similarity_join
+#' @name pattern_join
+#' @rdname pattern_join
+#'
+#' @description `pattern_join` and `similarity_join` join two `data.frame` objects based on \emph{regex} patterns or similarities to a reference, respectively. The \emph{first} `data.frame`
+#' contains a \emph{dirty} column (i.e. "real-world" data originating from a free text field) that needs grouping, categorizing, or classifying based on its content.
+#' The \emph{second} `data.frame` maps its rows to above \emph{dirty} column. It achieves this using the unique patterns (`pattern_join`) or references (`similarity_join`) given in
+#' one of its own columns (specified by parameter `by`, see below). `common_join` is a "common trunk" used by both
+#' `pattern_join` and `similarity_join` and can be used to create custom join functions (provided a custom `matcher`
+#' function is given, see below).
+#'
+#' @param x the first `data.frame`
+#' @param y the second `data.frame` containing a column with \emph{regex} patterns
+#' @param by character of length 1, specifying either names of corresponding field names in a
+#' named (e.g. `c("field name in x" = "field name containing patterns in y")`) or
+#' unnamed (e.g. `"field name in both x and y"`; here, both `x` and `y` contain the same column name) character.
+#' @param nomatch_label character or `NA`, specifying values joined to entries in `x` that do not
+#' have corresponding match in `y`
+#' @param nomatch_cutoff used by `similarity_match`: a numeric between 0 and 1 specifying the similarity
+#' (using metric \emph{optimal string alignment}, see \link[stringdist]{stringsim}) below which `nomatch_label` is
+#' joined to orginal data (meaning: the entry is treated as a "no match")
+#' @param x_split_cutoff integer specifying number of rows above which `x` is split into smaller
+#' `data.frame` objects; this is necessary, as the joining algorithm cannot handle data.frames with
+#' many thousand rows.
+#' @param multicore logical specifying if multiple cores should be used or not; it defaults to `TRUE`, although
+#' benefits in speed only arise if `nrow(x)` \emph{is substantially greater} than `x_split_cutoff`.
+#' @param matcher to create a custom join function using `common_join`, specify here a function accepting two
+#' character vectors and returning a matrix with a custom matching metric; e.g. for `similarity_join` the custom matching
+#' function is `function(x1, x2) stringdist::stringsimmatrix(a = x2, b = x1, method = "osa")`.
+#' @return `data.frame` of merged `x` and `y` based on found similarities columns specified by argument `by`.
+#'
+#' @importFrom dplyr %>%
+#' @importFrom dplyr pull
+#' @importFrom dplyr mutate
+#' @importFrom dplyr group_by
+#' @importFrom dplyr slice_max
+#' @importFrom dplyr arrange
+#' @importFrom dplyr select
+#' @importFrom dplyr ungroup
+#' @importFrom dplyr inner_join
+#' @importFrom tidyr pivot_longer
+#' @importFrom utils adist
+#' @import nycflights13
+#'
+#' @seealso \code{pattern_join} is similar to \link[fuzzyjoin]{regex_join}
+#'
+#' @export
+#'
+#' @examples
+#' # pattern_join 'airplanes' with 'model_type' by columns 'model' and 'pattern'
+#' airplanes_model_type <- pattern_join(airplanes, model_type, c("model" = "pattern"), multicore = FALSE)
 common_join <- function(x, y, by, nomatch_label = NA, nomatch_cutoff = 0.2,
                         x_split_cutoff = 500, multicore = TRUE, matcher = NULL) {
   # check arguments
@@ -215,24 +267,6 @@ common_join <- function(x, y, by, nomatch_label = NA, nomatch_cutoff = 0.2,
 # functions that accept x1 and x2 (see joiner) and return a matrix with a specific matching metric
 similarity_join_matcher <- function(x1, x2) stringdist::stringsimmatrix(a = x2, b = x1, method = "osa")
 
-#' @rdname x_join
-#'
-#' @param nomatch_cutoff numeric between 0 and 1 specifying the similarity
-#' (using metric \emph{optimal string alignment}, see \link[stringdist]{stringsim}) below which `nomatch_label` is
-#' joined to orginal data (meaning: the entry is treated as a "no match")
-#'
-#' @export
-#'
-#' @examples
-#' # test data
-#' dirty <- data.frame(sample = 1:6, description = c("Bergerx", "Mueler", "Horsst", "Kinga", "Mannn", "Schneemann"))
-#' reference <- data.frame(reference = c("Berger", "Mueller", "Horst", "King", "Mann", "Mustermann"))
-#' # similarity_join with default nomatch_cutoff
-#' dirty %>% similarity_join(reference, by = c("description" = "reference"))
-#' # to avoid mapping "Schneemann" to "Mustermann", increase nomatch_cutoff (default 0.2) to at least 0.51
-#' dirty %>% similarity_join(reference, by = c("description" = "reference"), nomatch_cutoff = 0.51)
-similarity_join <- function(...) common_join(..., matcher = similarity_join_matcher)
-
 # pattern join
 pattern_join_matcher <- function(x1, x2) {
   # calculate pattern (character) lengths
@@ -271,42 +305,7 @@ pattern_join_matcher <- function(x1, x2) {
 
 ## pattern_join, similarity_join
 
-#' @title pattern_join, similarity_join
-#' @name x_join
-#'
-#' `pattern_join` and `similarity_join` join two `data.frame` objects based on \emph{regex} patterns or similarities to a reference, respectively. The \emph{first} `data.frame`
-#' contains a \emph{dirty} column (i.e. "real-world" data originating from a free text field) that needs grouping, categorizing, or classifying based on its content.
-#' The \emph{second} `data.frame` maps its rows to above \emph{dirty} column. It achieves this using the unique patterns (`patter_join`) or references (`similarity_join`) given in
-#' one of its own columns (specified by parameter `by`, see below).
-#'
-#' @param x the first `data.frame`
-#' @param y the second `data.frame` containing a column with \emph{regex} patterns
-#' @param by character of length 1, specifying either names of corresponding field names in a
-#' named (e.g. `c("field name in x" = "field name containing patterns in y")`) or
-#' unnamed (e.g. `"field name in both x and y"`; here, both `x` and `y` contain the same column name) character.
-#' @param nomatch_label character or `NA`, specifying values joined to entries in `x` that do not
-#' have corresponding match in `y`
-#' @param x_split_cutoff integer specifying number of rows above which `x` is split into smaller
-#' `data.frame` objects; this is necessary, as the joining algorithm cannot handle data.frames with
-#' many thousand rows.
-#' @param multicore logical specifying if multiple cores should be used or not; it defaults to `TRUE`, although
-#' benefits in speed only arise if `nrow(x)` \emph{is substantially greater} than `x_split_cutoff`.
-#' @return `data.frame` of merged `x` and `y` based on found similarities columns specified by argument `by`.
-#'
-#' @importFrom dplyr %>%
-#' @importFrom dplyr pull
-#' @importFrom dplyr mutate
-#' @importFrom dplyr group_by
-#' @importFrom dplyr slice_max
-#' @importFrom dplyr arrange
-#' @importFrom dplyr select
-#' @importFrom dplyr ungroup
-#' @importFrom dplyr inner_join
-#' @importFrom tidyr pivot_longer
-#' @importFrom utils adist
-#' @import nycflights13
-#'
-#' @seealso \code{pattern_join} is similar to \link[fuzzyjoin]{regex_join}
+#' @rdname pattern_join
 #'
 #' @export
 #'
@@ -316,3 +315,16 @@ pattern_join_matcher <- function(x1, x2) {
 
 pattern_join <- function(...) common_join(..., nomatch_cutoff = -Inf, matcher = pattern_join_matcher)
 
+#' @rdname pattern_join
+#'
+#' @export
+#'
+#' @examples
+#' # test data for similarity_join
+#' dirty <- data.frame(sample = 1:6, description = c("Bergerx", "Mueler", "Horsst", "Kinga", "Mannn", "Schneemann"))
+#' reference <- data.frame(reference = c("Berger", "Mueller", "Horst", "King", "Mann", "Mustermann"))
+#' # similarity_join with default nomatch_cutoff
+#' dirty %>% similarity_join(reference, by = c("description" = "reference"))
+#' # to avoid mapping "Schneemann" to "Mustermann", increase nomatch_cutoff (default 0.2) to at least 0.51
+#' dirty %>% similarity_join(reference, by = c("description" = "reference"), nomatch_cutoff = 0.51)
+similarity_join <- function(...) common_join(..., matcher = similarity_join_matcher)
