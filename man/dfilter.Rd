@@ -40,7 +40,7 @@ test <- data.frame(group = sample(letters[1:4], 20, TRUE),
                   time = as.POSIXct(runif(20, 0, as.numeric(Sys.time())),
                                     origin = as.POSIXct("1970-01-01 00:00.00 UTC")))
 
-# indicate firs chunk satisfying the condition set by max.dist
+# indicate first chunk satisfying the condition set by max.dist
 dfilter(test$pos, max.dist = 15, which.chunk = "first")
 # show all chunks
 dfilter(test$pos, max.dist = 15, which.chunk = "all")

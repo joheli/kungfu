@@ -83,19 +83,19 @@ postgresql_uploader <- function(con, r_df, pg_table = deparse(substitute(r_df)),
   # try to upload data
   tryCatch({
     # start transaction
-    dbBegin(con)
+    dbBegin(conn = con)
 
     # Create temporary table ...
-    dbSendStatement(con, create_table_sql)
+    dbSendStatement(conn = con, create_table_sql)
     # .. and upload r_df into newly created temporary table
-    dbWriteTable(con = con, name = temp_table_name, value = r_df, row.names = FALSE)
+    dbWriteTable(conn = con, name = temp_table_name, value = r_df, row.names = FALSE)
 
     # extract info regarding uploaded and not uploaded data ...
-    uploaded <- dbFetch(dbSendQuery(con, uploaded_sql))
-    not_uploaded <- dbFetch(dbSendQuery(con, not_uploaded_sql))
+    uploaded <- dbFetch(dbSendQuery(conn = con, uploaded_sql))
+    not_uploaded <- dbFetch(dbSendQuery(conn = con, not_uploaded_sql))
 
     # perform insert and add feedback information to info
-    status <- dbSendStatement(con, insert_sql)
+    status <- dbSendStatement(conn = con, insert_sql)
     info <- dbGetInfo(status)
     info$uploaded <- uploaded
     info$not_uploaded <- not_uploaded
@@ -139,6 +139,6 @@ postgresql_uploader <- function(con, r_df, pg_table = deparse(substitute(r_df)),
 #' @export
 killConnections <- function() {
   for(con in dbListConnections(dbDriver("PostgreSQL"))){
-    dbDisconnect(con)
+    dbDisconnect(conn = con)
   }
 }

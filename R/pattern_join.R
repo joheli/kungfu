@@ -133,7 +133,7 @@ joiner <- function(x_part, y, f_x, x2, matcher) {
   colnames(matches) <- as.character(1:nrow(x_part))
 
   # to avoid errors of type "Undefined global functions or variables", set variables to NULL
-  uniquerownumber <- uniquepatternnumber <- matching_metric <- n <- pattern <- NULL
+  matching_metric <- n <- pattern <- unique_x1_number <- unique_x2_number <- NULL
 
   # convert matrix to data.frame
   matches_d <- matches %>%
@@ -263,6 +263,8 @@ common_join <- function(x, y, by, nomatch_cutoff = 0.2,
       result <- prl(cl = n.cores)
     }
   }
+  # to avoid errors of type "Undefined global functions or variables", set variables to NULL
+  matching_metric <- NULL
 
   # rbind pieces together
   result0 <- Reduce(rbind, result, data.frame())
@@ -329,7 +331,11 @@ pattern_join_matcher <- function(x1, x2) {
 #' # pattern_join 'airplanes' with 'model_type' by columns 'model' and 'pattern'
 #' airplanes_model_type <- pattern_join(airplanes, model_type, c("model" = "pattern"), multicore = FALSE)
 
-pattern_join <- function(...) common_join(..., nomatch_cutoff = 0.1, matcher = pattern_join_matcher)
+pattern_join <- function(x, y, by, nomatch_cutoff = 0.2, x_split_cutoff = 500,
+                         multicore = TRUE) {
+  common_join(x = x, y = y, by = by, nomatch_cutoff = nomatch_cutoff,
+              x_split_cutoff = x_split_cutoff, multicore = multicore, matcher = pattern_join_matcher)
+}
 
 #' @rdname pattern_join
 #'
@@ -340,7 +346,11 @@ pattern_join <- function(...) common_join(..., nomatch_cutoff = 0.1, matcher = p
 #' dirty <- data.frame(sample = 1:6, description = c("Bergerx", "Mueler", "Horsst", "Kinga", "Mannn", "Schneemann"))
 #' reference <- data.frame(reference = c("Berger", "Mueller", "Horst", "King", "Mann", "Mustermann"))
 #' # similarity_join with default nomatch_cutoff
-#' dirty %>% similarity_join(reference, by = c("description" = "reference"))
+#' dirty %>% similarity_join(reference, by = c("description" = "reference"), multicore = FALSE)
 #' # to avoid mapping "Schneemann" to "Mustermann", increase nomatch_cutoff (default 0.4) to at least 0.51
-#' dirty %>% similarity_join(reference, by = c("description" = "reference"), nomatch_cutoff = 0.51)
-similarity_join <- function(...) common_join(..., nomatch_cutoff = 0.4, matcher = similarity_join_matcher)
+#' dirty %>% similarity_join(reference, by = c("description" = "reference"), nomatch_cutoff = 0.51, multicore = FALSE)
+similarity_join <- function(x, y, by, nomatch_cutoff = 0.4,
+                            x_split_cutoff = 500, multicore = TRUE) {
+  common_join(x = x, y = y, by = by, nomatch_cutoff = nomatch_cutoff,
+              x_split_cutoff = x_split_cutoff, multicore = multicore, matcher = similarity_join_matcher)
+}

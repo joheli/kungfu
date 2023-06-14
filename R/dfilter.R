@@ -118,6 +118,9 @@ below_min.dist <- function(x, min.dist = 0) {
   nxn <- 1:length(x)
   names(xn) <- nxn
 
+  # to avoid errors of type "Undefined global functions or variables", set variables to NULL
+  to <- from <- distance <- NULL
+
   uncompatibleindices <- function(x) {
     dist2df(dist(x)) %>%
       filter(from != to) %>%
@@ -155,6 +158,7 @@ below_min.dist <- function(x, min.dist = 0) {
 #' @importFrom stats dist
 #' @importFrom stats hclust
 #' @importFrom stats cutree
+#' @importFrom stats runif
 #' @export
 #'
 #' @examples
@@ -165,7 +169,7 @@ below_min.dist <- function(x, min.dist = 0) {
 #'                   time = as.POSIXct(runif(20, 0, as.numeric(Sys.time())),
 #'                                     origin = as.POSIXct("1970-01-01 00:00.00 UTC")))
 #'
-#' # indicate firs chunk satisfying the condition set by max.dist
+#' # indicate first chunk satisfying the condition set by max.dist
 #' dfilter(test$pos, max.dist = 15, which.chunk = "first")
 #' # show all chunks
 #' dfilter(test$pos, max.dist = 15, which.chunk = "all")
@@ -289,6 +293,9 @@ dfilter <- function(d, min.dist = 0, max.dist = Inf,
     ch <- chunks(0, max.distance = 0, which.chunk = which.chunk)
     e.trans <- data.frame(e.orig = e.orig[1], e = 0, e.x = 0) # e.orig[1] has to be passed to conserve type!
   }
+
+  # to avoid errors of type "Undefined global functions or variables", set variables to NULL
+  chunk <- NULL
 
   # process according to return type of chunks
   if (inherits(ch, "data.frame")) {

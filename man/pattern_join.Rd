@@ -16,9 +16,23 @@ common_join(
   matcher = NULL
 )
 
-pattern_join(...)
+pattern_join(
+  x,
+  y,
+  by,
+  nomatch_cutoff = 0.2,
+  x_split_cutoff = 500,
+  multicore = TRUE
+)
 
-similarity_join(...)
+similarity_join(
+  x,
+  y,
+  by,
+  nomatch_cutoff = 0.4,
+  x_split_cutoff = 500,
+  multicore = TRUE
+)
 }
 \arguments{
 \item{x}{the first \code{data.frame}}
@@ -62,9 +76,9 @@ airplanes_model_type <- pattern_join(airplanes, model_type, c("model" = "pattern
 dirty <- data.frame(sample = 1:6, description = c("Bergerx", "Mueler", "Horsst", "Kinga", "Mannn", "Schneemann"))
 reference <- data.frame(reference = c("Berger", "Mueller", "Horst", "King", "Mann", "Mustermann"))
 # similarity_join with default nomatch_cutoff
-dirty \%>\% similarity_join(reference, by = c("description" = "reference"))
+dirty \%>\% similarity_join(reference, by = c("description" = "reference"), multicore = FALSE)
 # to avoid mapping "Schneemann" to "Mustermann", increase nomatch_cutoff (default 0.4) to at least 0.51
-dirty \%>\% similarity_join(reference, by = c("description" = "reference"), nomatch_cutoff = 0.51)
+dirty \%>\% similarity_join(reference, by = c("description" = "reference"), nomatch_cutoff = 0.51, multicore = FALSE)
 }
 \seealso{
 \code{pattern_join} is similar to \link[fuzzyjoin]{regex_join}
