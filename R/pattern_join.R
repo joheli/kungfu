@@ -1,5 +1,18 @@
 ## Helper functions
 
+# assess length of characters (optionally also digits) in a string
+alphaLen <- function(x, excludeDigits = TRUE) {
+  # retain original x and record number of characters
+  originalX <- x
+  originalLength <- nchar(x)
+  # optionally replace digits by empty space in x
+  if (!excludeDigits) x <- gsub("[0-9]", "", x)
+  # replace characters and space by empty space in x
+  x <- gsub("[[:space:] a-z]", "", x, ignore.case = TRUE)
+  # return length of string with all non-characters (and optionally non-digits) removed
+  originalLength - nchar(x)
+}
+
 # rescale
 rescale <- function(x, min = 0, max = 1) {
   if (all(diff(x) == 0)) { # if all values are the same ...
@@ -62,7 +75,7 @@ rescale_modify <- function(x, modification = c("none", "pull up", "push down")) 
 
 # custom rescale functions used by pattern_join below
 rescale_adist <- function(x) rescale_modify(rescale10(x), "push down")
-rescale_pattern_complexity <- function(x) rescale(x, min = 0.01, max = 1)
+rescale_pattern_length <- function(x) rescale(x, min = 0.1, max = 1)
 
 # function matchLen determines match lengths between pattern and target
 matchLen <- function(pattern, target) {
@@ -125,7 +138,8 @@ joiner <- function(x_part, y, f_x, x2, matcher) {
   # convert matrix to data.frame
   matches_d <- matches %>%
     as.data.frame %>%
-    mutate(unique_x2_number = as.character(1:nrow(y))) %>%
+    mutate(unique_x2_number = as.character(1:nrow(matches))) %>%
+    # mutate(unique_x2_number = as.character(1:nrow(y))) %>%
     tidyr::pivot_longer(-unique_x2_number, # convert to long format
                         names_to = "unique_x1_number",
                         values_to = "matching_metric") %>%
@@ -133,7 +147,9 @@ joiner <- function(x_part, y, f_x, x2, matcher) {
     slice_max(matching_metric, n = 1, with_ties = FALSE) %>% # do not allow more than one match
     arrange(as.numeric(unique_x1_number)) %>%
     inner_join(mutate(x_part, unique_x1_number = as.character(1:n())), by = "unique_x1_number") %>% # inner_join to x_part
-    inner_join(mutate(y, unique_x2_number = as.character(1:n())), by = "unique_x2_number") %>% # inner_join to y
+    # inner_join(mutate(y, unique_x2_number = as.character(1:n())), by = "unique_x2_number") %>% # inner_join to y
+    # change to left_join to also include pattern .* added by pattern_join_matcher
+    left_join(mutate(y, unique_x2_number = as.character(1:n())), by = "unique_x2_number") %>%
     ungroup() %>%
     select(-unique_x1_number, -unique_x2_number) # get rid of temporary columns
 
@@ -159,10 +175,8 @@ joiner <- function(x_part, y, f_x, x2, matcher) {
 #' @param by character of length 1, specifying either names of corresponding field names in a
 #' named (e.g. `c("field name in x" = "field name containing patterns in y")`) or
 #' unnamed (e.g. `"field name in both x and y"`; here, both `x` and `y` contain the same column name) character.
-#' @param nomatch_label character or `NA`, specifying values joined to entries in `x` that do not
-#' have corresponding match in `y`
 #' @param nomatch_cutoff used by `similarity_match`: a numeric between 0 and 1 specifying the similarity
-#' (using metric \emph{optimal string alignment}, see \link[stringdist]{stringsim}) below which `nomatch_label` is
+#' (using metric \emph{optimal string alignment}, see \link[stringdist]{stringsim}) below which `NA` is
 #' joined to orginal data (meaning: the entry is treated as a "no match")
 #' @param x_split_cutoff integer specifying number of rows above which `x` is split into smaller
 #' `data.frame` objects; this is necessary, as the joining algorithm cannot handle data.frames with
@@ -172,7 +186,8 @@ joiner <- function(x_part, y, f_x, x2, matcher) {
 #' @param matcher to create a custom join function using `common_join`, specify here a function accepting two
 #' character vectors and returning a matrix with a custom matching metric; e.g. for `similarity_join` the custom matching
 #' function is `function(x1, x2) stringdist::stringsimmatrix(a = x2, b = x1, method = "osa")`.
-#' @return `data.frame` of merged `x` and `y` based on found similarities columns specified by argument `by`.
+#'
+#' @return a `tibble` of merged `x` and `y` based on found similarities columns specified by argument `by`.
 #'
 #' @importFrom dplyr %>%
 #' @importFrom dplyr pull
@@ -191,14 +206,14 @@ joiner <- function(x_part, y, f_x, x2, matcher) {
 #'
 #' @export
 #'
-#' @examples
-#' # pattern_join 'airplanes' with 'model_type' by columns 'model' and 'pattern'
-#' airplanes_model_type <- pattern_join(airplanes, model_type, c("model" = "pattern"), multicore = FALSE)
-common_join <- function(x, y, by, nomatch_label = NA, nomatch_cutoff = 0.2,
+common_join <- function(x, y, by, nomatch_cutoff = 0.2,
                         x_split_cutoff = 500, multicore = TRUE, matcher = NULL) {
   # check arguments
   for (d in list(x, y)) if (!inherits(d, "data.frame")) stop("Please supply 'data.frame' objects for arguments 'x' and 'y'.")
   if (!inherits(by, "character") | length(by) != 1) stop("Please supply a character of length 1 as argument 'by'.")
+
+  # set nomatch_label to NA
+  nomatch_label <- NA
 
   # extract field names specified by 'by'
   f_x <- f_y <- NULL
@@ -255,7 +270,7 @@ common_join <- function(x, y, by, nomatch_label = NA, nomatch_cutoff = 0.2,
   #     first create an index
   index_below_nomatch_cutoff <- pull(result0, matching_metric) < nomatch_cutoff
   #     second set to 'nomatch_label' if below nomatch_cutoff
-  result0[index_below_nomatch_cutoff, f_y] <- nomatch_label
+  result0[index_below_nomatch_cutoff, names(y)] <- nomatch_label
   # finally remove matching metric from result
   result <- result0 %>% select(-matching_metric)
   #result <- result0
@@ -269,38 +284,39 @@ similarity_join_matcher <- function(x1, x2) stringdist::stringsimmatrix(a = x2, 
 
 # pattern join
 pattern_join_matcher <- function(x1, x2) {
-  # calculate pattern (character) lengths
-  x2_nchars <- nchar(x2)
+  # add joker pattern .* to x2 if not already present
+  if (!any(grepl("^\\.\\*$", x2))) x2 <- c(x2, ".*")
 
-  # calculate "pattern complexity", assumed to correspond to pattern length (0.1 ~ lowest, 1 ~ highest complexity)
-  x2_complexity <- rescale_pattern_complexity(x2_nchars)
+  # calculate pattern (character) lengths; these serve as a proxy for pattern specificity
+  x2_lengths <- alphaLen(x2)
 
-  # calculate approximate string distances
-  # fixed = FALSE means that x2 (the first argument) is treated as a regular expression
-  ad <- adist(x = x2, y = x1, fixed = F, ignore.case = T)
+  # rescale pattern lengths (0.1 ~ lowest, 1 ~ highest complexity)
+  x2_lengths_rs <- rescale_pattern_length(x2_lengths)
 
-  # 1st weight "rs" corresponds to string similarities:
-  # rescale string distances (ad); rs ~ 1 and rs ~ 0 mean little and great distances, respectively.
-  rs <- apply(ad, 2, rescale_adist)
+  # calculate string distances treating x2 as regular expressions (fixed = FALSE)
+  ad <- adist(x = x2, y = x1, fixed = FALSE, ignore.case = TRUE)
 
-  # 2nd weight (match overlaps) and 3rd weight (pattern complexity)
-  # calculate match lengths
-  mlm <- matchLenMatrix(x2, x1)
+  # calculate target (x1) lengths
+  x1_lenghts <- nchar(x1)
 
-  # calculate match overlaps, i.e. what proportion of targets are captured by the patterns
-  # create a matrix with target lengths (i.e. lengths of x1)
-  tl <- matrix(rep(nchar(x1), length(x2)), byrow = TRUE, nrow = length(x2))
+  # normalize string distances (ad) through division by x1_lenghts
+  # this operation mostly generates values between 0 (no distance) to 1 (great distance)
+  # as usually number of characters of targets exceed pattern lengths
+  adn <- t(t(ad)/x1_lenghts)
+  # in case values are greater than 1 enforce upper bound of 1
+  adn1 <- adn
+  adn1[adn1 > 1] <- 1
 
-  # the overlaps are match lengths divided by target lengths; i.e. the proportions of targets captured by the
-  # regex patterns
-  mlm_ol <- mlm/tl
+  # invert normalized string distances (adn1) to get 0 for great distance and 1 for no distance
+  # then, push values down to increase contrast (i.e. make good matches stand out)
+  adni <- apply(1 - adn1, 2, rescale_modify, modification = "push down")
 
-  # adjust for pattern complexity, i.e. favor complex (=long) patterns over simple (=short) patterns
-  mlm_ol_pc <- apply(mlm_ol, 2, function(column) column * x2_complexity)
+  # finally, multiply by rescaled pattern lengths (x2_lengths_rs) to give more weight
+  # to long rather than short patterns
+  adnip <- adni * x2_lengths_rs
 
-  # compute rescaled and weighted approximate string distances (from here on abbreviated as 'rwasd')
-  # by multiplying rs with mlm_ol_pc
-  rs * mlm_ol_pc
+  # return
+  adnip
 }
 
 ## pattern_join, similarity_join
@@ -313,7 +329,7 @@ pattern_join_matcher <- function(x1, x2) {
 #' # pattern_join 'airplanes' with 'model_type' by columns 'model' and 'pattern'
 #' airplanes_model_type <- pattern_join(airplanes, model_type, c("model" = "pattern"), multicore = FALSE)
 
-pattern_join <- function(...) common_join(..., nomatch_cutoff = -Inf, matcher = pattern_join_matcher)
+pattern_join <- function(...) common_join(..., nomatch_cutoff = 0.1, matcher = pattern_join_matcher)
 
 #' @rdname pattern_join
 #'
@@ -325,6 +341,6 @@ pattern_join <- function(...) common_join(..., nomatch_cutoff = -Inf, matcher = 
 #' reference <- data.frame(reference = c("Berger", "Mueller", "Horst", "King", "Mann", "Mustermann"))
 #' # similarity_join with default nomatch_cutoff
 #' dirty %>% similarity_join(reference, by = c("description" = "reference"))
-#' # to avoid mapping "Schneemann" to "Mustermann", increase nomatch_cutoff (default 0.2) to at least 0.51
+#' # to avoid mapping "Schneemann" to "Mustermann", increase nomatch_cutoff (default 0.4) to at least 0.51
 #' dirty %>% similarity_join(reference, by = c("description" = "reference"), nomatch_cutoff = 0.51)
-similarity_join <- function(...) common_join(..., matcher = similarity_join_matcher)
+similarity_join <- function(...) common_join(..., nomatch_cutoff = 0.4, matcher = similarity_join_matcher)

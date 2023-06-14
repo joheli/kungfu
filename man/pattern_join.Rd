@@ -10,7 +10,6 @@ common_join(
   x,
   y,
   by,
-  nomatch_label = NA,
   nomatch_cutoff = 0.2,
   x_split_cutoff = 500,
   multicore = TRUE,
@@ -30,11 +29,8 @@ similarity_join(...)
 named (e.g. \code{c("field name in x" = "field name containing patterns in y")}) or
 unnamed (e.g. \code{"field name in both x and y"}; here, both \code{x} and \code{y} contain the same column name) character.}
 
-\item{nomatch_label}{character or \code{NA}, specifying values joined to entries in \code{x} that do not
-have corresponding match in \code{y}}
-
 \item{nomatch_cutoff}{used by \code{similarity_match}: a numeric between 0 and 1 specifying the similarity
-(using metric \emph{optimal string alignment}, see \link[stringdist]{stringsim}) below which \code{nomatch_label} is
+(using metric \emph{optimal string alignment}, see \link[stringdist]{stringsim}) below which \code{NA} is
 joined to orginal data (meaning: the entry is treated as a "no match")}
 
 \item{x_split_cutoff}{integer specifying number of rows above which \code{x} is split into smaller
@@ -49,7 +45,7 @@ character vectors and returning a matrix with a custom matching metric; e.g. for
 function is \code{function(x1, x2) stringdist::stringsimmatrix(a = x2, b = x1, method = "osa")}.}
 }
 \value{
-\code{data.frame} of merged \code{x} and \code{y} based on found similarities columns specified by argument \code{by}.
+a \code{tibble} of merged \code{x} and \code{y} based on found similarities columns specified by argument \code{by}.
 }
 \description{
 \code{pattern_join} and \code{similarity_join} join two \code{data.frame} objects based on \emph{regex} patterns or similarities to a reference, respectively. The \emph{first} \code{data.frame}
@@ -62,14 +58,12 @@ function is given, see below).
 \examples{
 # pattern_join 'airplanes' with 'model_type' by columns 'model' and 'pattern'
 airplanes_model_type <- pattern_join(airplanes, model_type, c("model" = "pattern"), multicore = FALSE)
-# pattern_join 'airplanes' with 'model_type' by columns 'model' and 'pattern'
-airplanes_model_type <- pattern_join(airplanes, model_type, c("model" = "pattern"), multicore = FALSE)
 # test data for similarity_join
 dirty <- data.frame(sample = 1:6, description = c("Bergerx", "Mueler", "Horsst", "Kinga", "Mannn", "Schneemann"))
 reference <- data.frame(reference = c("Berger", "Mueller", "Horst", "King", "Mann", "Mustermann"))
 # similarity_join with default nomatch_cutoff
 dirty \%>\% similarity_join(reference, by = c("description" = "reference"))
-# to avoid mapping "Schneemann" to "Mustermann", increase nomatch_cutoff (default 0.2) to at least 0.51
+# to avoid mapping "Schneemann" to "Mustermann", increase nomatch_cutoff (default 0.4) to at least 0.51
 dirty \%>\% similarity_join(reference, by = c("description" = "reference"), nomatch_cutoff = 0.51)
 }
 \seealso{
