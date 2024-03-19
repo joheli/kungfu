@@ -37,7 +37,7 @@
 #' set.seed(123)
 #' dl.test <- data.frame(id = sample(1:10, 30, replace = TRUE), 
 #'            category = sample(letters[1:4], 30, replace = TRUE), 
-#'            timestamp = as.POSIXct(runif(size, 1704063600, 1711922400), 
+#'            timestamp = as.POSIXct(runif(30, 1704063600, 1711922400), 
 #'                                         origin = "1970-01-01"))
 #'
 #' # test: dlabel will reveal three id-category combinations with temporal 
