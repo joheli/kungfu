@@ -25,6 +25,8 @@
 #' 
 #' @import dplyr
 #' @import rlang
+#' @import glue
+#' @import tidyr
 #' 
 #' @return A data frame with the distance label added.
 #' 
@@ -53,6 +55,10 @@ dlabel <- function(df, id, category, distance, min.dist, max.dist, temporal.unit
             invert = FALSE, df_filter = NULL) {
   # save original df for debugging
   df0 <- df
+
+  # avoid error messages of the variety 'no visible binding for global variable'
+  chunk <- dlabel_row_number <- NULL
+
   # add row number to df
   df <- df %>% 
     arrange(pick(!!id, !!category, !!distance)) %>% 
@@ -117,6 +123,8 @@ dlabel <- function(df, id, category, distance, min.dist, max.dist, temporal.unit
 #'
 #' @import dplyr
 #' @import rlang
+#' @import glue
+#' @import tidyr
 #' 
 #' @export 
 #' 
