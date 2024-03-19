@@ -14,6 +14,7 @@ Presently, the package contains the following functions (in alphabetic order):
   - `cleaner`: removes duplicates in a `data.frame`
   - `df_pattern_subset`: subsets a `data.frame` given two regex patterns marking the upper left and lower right corners of the returned `data.frame`.
   - `dfilter`: filters a vector of type *numeric*, *integer*, *Date*, or *POSIXt*, in a fashion that removes entries exceeding a user-specified distance from other values; e.g. "dfiltering" `c(1,2,10)` would remove `10`, if argument `max.dist` is `5` (as `10 - 2 > 5`); similarly, an argument `min.dist` can be specified to enforce a minimal distance between entries.
+  - `dlabel`: wraps `dfilter` to label occurrences satisfying specified distance criteria (see function `dfilter`); function `bc_contamination` is merely a customized call of `dlabel`, designed to look scan blood culture results for possible contamination.
   - `pattern_join`: joins two tables based on regex patterns; it is similar to function `regex_join` in package [fuzzyjoin](https://github.com/dgrtwo/fuzzyjoin), which I discovered only after writing `pattern_join`
   - `postgresql_uploader`: uploads a `data.frame` into an existing PostgreSQL table
   - `rbinder`: function for importing and joining of multiple csv-like files with identical headers
