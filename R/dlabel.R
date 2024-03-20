@@ -1,5 +1,5 @@
 #' @name dlabel
-#' @title dlabel
+#' @title Distance label
 #' 
 #' @description 
 #' This function adds a label to a data frame based on the distance between records as 
@@ -119,8 +119,10 @@ dlabel <- function(df, id, category, distance, min.dist, max.dist, temporal.unit
 
 #' @rdname dlabel
 #' @description `bc_contamination` calls \code{dlabel} with default parameters for the
-#' calculation of contamination in blood cultures.
+#' labelling of possibly contaminated blood cultures.
 #'
+#' @param ... Arguments to be passed to \code{dlabel}.
+#' 
 #' @import dplyr
 #' @import rlang
 #' @import glue
@@ -134,15 +136,15 @@ dlabel <- function(df, id, category, distance, min.dist, max.dist, temporal.unit
 #' bugs <- data.frame(species = c("S. epidermidis", "C. acnes", "S. aureus", "E. coli"),
 #'                   category = c("skin flora", "skin flora", "pathogen", "pathogen"))
 #' 
-#' samples <- data.frame(lab_no = 1:50,
+#' blood_cultures <- data.frame(lab_no = 1:50,
 #'                        patient = sample(1:10, 50, replace = TRUE),
 #'                        species = sample(bugs$species, 50, replace = TRUE),
 #'                        timestamp = as.POSIXct(runif(50, 1704063600, 1711000000), 
 #'                                                origin = "1970-01-01"))
 #' 
-#' samples <- samples %>% left_join(bugs, by = "species")
+#' blood_cultures <- blood_cultures %>% left_join(bugs, by = "species")
 #' 
-#' bc_conta <- bc_contamination(samples, 
+#' bc_conta <- bc_contamination(blood_cultures, 
 #'                             id = "patient", 
 #'                             category = "species", 
 #'                             distance = "timestamp",

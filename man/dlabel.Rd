@@ -3,7 +3,7 @@
 \name{dlabel}
 \alias{dlabel}
 \alias{bc_contamination}
-\title{dlabel}
+\title{Distance label}
 \usage{
 dlabel(
   df,
@@ -52,6 +52,8 @@ for details.}
 
 \item{df_filter}{A character string specifying the filter expression to be applied to the data frame before
 the distance label is calculated.}
+
+\item{...}{Arguments to be passed to \code{dlabel}.}
 }
 \value{
 A data frame with the distance label added.
@@ -63,7 +65,7 @@ is a boolean stating whether the distance between records is within the specifie
 range.
 
 \code{bc_contamination} calls \code{dlabel} with default parameters for the
-calculation of contamination in blood cultures.
+labelling of possibly contaminated blood cultures.
 }
 \examples{
 # create test data
@@ -87,15 +89,15 @@ set.seed(123)
 bugs <- data.frame(species = c("S. epidermidis", "C. acnes", "S. aureus", "E. coli"),
                   category = c("skin flora", "skin flora", "pathogen", "pathogen"))
 
-samples <- data.frame(lab_no = 1:50,
+blood_cultures <- data.frame(lab_no = 1:50,
                        patient = sample(1:10, 50, replace = TRUE),
                        species = sample(bugs$species, 50, replace = TRUE),
                        timestamp = as.POSIXct(runif(50, 1704063600, 1711000000), 
                                                origin = "1970-01-01"))
 
-samples <- samples \%>\% left_join(bugs, by = "species")
+blood_cultures <- blood_cultures \%>\% left_join(bugs, by = "species")
 
-bc_conta <- bc_contamination(samples, 
+bc_conta <- bc_contamination(blood_cultures, 
                             id = "patient", 
                             category = "species", 
                             distance = "timestamp",

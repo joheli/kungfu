@@ -1,7 +1,4 @@
-#library(tidyr)
-#library(dplyr)
-
-# Test df
+# Test data frame
 set.seed(1)
 test <- data.frame(group = sample(letters[1:4], 20, TRUE),
                    pos = runif(20, 0, 100),
